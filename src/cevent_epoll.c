@@ -12,6 +12,7 @@ static int cevents_create_priv_impl(cevents *cevts) {
 	epoll_priv *priv = jmalloc(sizeof(epoll_priv));
 	memset(priv, 0, sizeof(epoll_priv));
 	priv->epfd = epoll_create(1024);
+	snprintf(cevts->impl_name, sizeof(cevts->impl_name), "%s", "epoll");
 	cevts->priv_data = priv;
 }
 

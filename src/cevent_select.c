@@ -11,6 +11,7 @@ static int cevents_create_priv_impl(cevents *cevts) {
 	rwfd_set *rwfds = jmalloc(sizeof(rwfd_set));
 	FD_ZERO(&rwfds->rfds);
 	FD_ZERO(&rwfds->wfds);
+	snprintf(cevts->impl_name, sizeof(cevts->impl_name), "%s", "select");
 	cevts->priv_data = rwfds;
 	return 0;
 }

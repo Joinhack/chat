@@ -34,6 +34,7 @@ struct _cevents {
 	cevent *events; //should be MAX_EVENTS
 	cevent_fired *fired; //should be MAX_EVENTS, push to top level
 	cqueue *fired_queue;
+	char impl_name[64];
 	spinlock_t fired_lock;
 	void *priv_data; //use for implement data.
 };

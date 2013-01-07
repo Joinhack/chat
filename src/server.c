@@ -40,6 +40,7 @@ static server *create_server() {
 		return NULL;
 	}
 	svr->evts = create_cevents();
+	fprintf(stdout, "use %s\n", svr->evts->impl_name);
 	return svr;
 }
 
@@ -50,7 +51,7 @@ int server_init(server *svr) {
 
 int mainLoop(server *svr) {
 	for(;;) {
-		cevents_poll(svr->evts, 10);
+		cevents_poll(svr->evts, 5);
 	}
 	return 0;
 }

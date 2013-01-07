@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "common.h"
 #include "cevent.h"
 #include "jmalloc.h"
 #include "code.h"

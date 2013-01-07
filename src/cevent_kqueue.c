@@ -12,6 +12,7 @@ static int cevents_create_priv_impl(cevents *cevts) {
 	kqueue_priv *priv = jmalloc(sizeof(kqueue_priv));
 	memset(priv, 0, sizeof(kqueue_priv));
 	priv->kqfd = kqueue();
+	snprintf(cevts->impl_name, sizeof(cevts->impl_name), "%s", "kqueue");
 	cevts->priv_data = priv;
 	return 0;
 }
