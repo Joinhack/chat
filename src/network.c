@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "cevent.h"
 #include "cnet.h"
 #include "cio.h"

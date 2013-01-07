@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 #include "spinlock.h"
 #include "cprocess.h"
 

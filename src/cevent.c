@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "cevent.h"
 #include "jmalloc.h"
@@ -12,6 +13,8 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms);
 
 #ifdef USE_EPOLL
 #include "cevent_epoll.c"
+#elif defined(USE_KQUEUE)
+#include "cevent_kqueue.c"
 #else
 #include "cevent_select.c"
 #endif

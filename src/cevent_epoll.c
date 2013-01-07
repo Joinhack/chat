@@ -17,6 +17,7 @@ static int cevents_create_priv_impl(cevents *cevts) {
 
 static int cevents_destory_priv_impl(cevents *cevts) {
 	jfree(cevts->priv_data);
+	cevts->priv_data = NULL;
 	return 0;
 }
 
@@ -58,16 +59,16 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 	struct epoll_event *ep_event;
 	cevent *event;
 	cevent_fired *fired;
-	rs = epoll_wait(priv->epfd, priv->events, cevts->maxfd, ms);
+	rs = epoll_wait(priv->epfd, priv->events, MAX_EVENTS, ms);
 	if(rs > 0) {
 		for(i = 0; i < rs; i++) {
 			mask = CEV_NONE;
 			ep_event = priv->events + i;
-			if (ep_event->events & EPOLLIN) 
-				mask |= CEV_READ;
-			if (ep_event->events & EPOLLIN) 
-				mask |= CEV_READ;
 			fired = cevts->fired + count;
+			if (ep_event->events & EPOLLIN) 
+				mask |= CEV_READ;
+			if (ep_event->events & EPOLLIN) 
+				mask |= CEV_READ;
 			fired->fd = ep_event->data.fd;
 			event = cevts->events + fired->fd;
 			if(event->mask & CEV_MASTER) 

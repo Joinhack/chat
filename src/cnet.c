@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -10,7 +11,7 @@
 #include <sys/un.h>
 #include "cnet.h"
 
-static cnet_fmt_err(char *err, size_t len, const char *fmt, ...) {
+static void cnet_fmt_err(char *err, size_t len, const char *fmt, ...) {
 	va_list list;
 	va_start(list, fmt);
 	vsnprintf(err, len, fmt, list);
