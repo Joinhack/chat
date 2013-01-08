@@ -51,7 +51,7 @@ int server_init(server *svr) {
 
 int mainLoop(server *svr) {
 	for(;;) {
-		cevents_poll(svr->evts, 5);
+		cevents_poll(svr->evts, 500);
 	}
 	return 0;
 }
