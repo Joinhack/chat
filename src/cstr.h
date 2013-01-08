@@ -14,4 +14,4 @@ CINLINE size_t cstr_len(cstr s) {
 	return (size_t)(*(uint32_t*)CSTR_REALPTR(s));
 }
 
-#endif /*CSTR_H*/
+#endif /*end common str define*/
