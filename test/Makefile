@@ -1,6 +1,8 @@
 CC = gcc
 INC = ../src
-OPTS = -g
+OPTS =
+
+all: cstr_test cnet_test cthread_test
 
 cnet_test:
 	$(CC) -o cnet_test cnet_test.c ../src/cnet.c -I$(INC) $(OPTS)
@@ -10,6 +12,8 @@ cstr_test:
 
 jmalloc_test:
 	$(CC) -o jmalloc_test jmalloc_test.c -lpthread -DTHREAD_TEST ../src/jmalloc.c -I$(INC) 
+cthread_test:
+	$(CC) -o cthread_test  cthread_test.c ../src/cthread.c ../src/cqueue.c ../src/spinlock.c ../src/jmalloc.c -I$(INC) $(OPTS) -lpthread -g
 
-all: cstr_test cnet_test
+
 
