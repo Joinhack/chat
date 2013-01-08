@@ -19,8 +19,8 @@
 #endif
 
 #ifndef HAD_MEM_SIZE
-#define MEM_PREFIX_SIZE (sizeof(size_t))
-#define mem_size(ptr) *((size_t*)ptr - MEM_PREFIX_SIZE)
+#define MEM_PREFIX_SIZE 4
+#define mem_size(ptr) *((uint32_t*)ptr - MEM_PREFIX_SIZE)
 #endif
 
 
@@ -39,7 +39,7 @@ void *jmalloc(size_t s) {
 #ifndef HAD_MEM_SIZE
 	ptr = malloc(s + MEM_PREFIX_SIZE);
 	oom_test(ptr, s);
-	*((size_t*)ptr) = s;
+	*((uint32_t*)ptr) = s;
 	update_used_mem(s + MEM_PREFIX_SIZE);
 	return (char*)ptr + MEM_PREFIX_SIZE;
 #else
@@ -52,14 +52,14 @@ void *jmalloc(size_t s) {
 
 void *jrealloc(void *ptr, size_t s) {
 	void *new_ptr;
-	size_t old_size;
+	uint32_t old_size;
 #ifndef HAD_MEM_SIZE
 	void *real_ptr;
 	real_ptr = (char*)ptr - MEM_PREFIX_SIZE;
-	old_size = *((size_t*)real_ptr);
+	old_size = *((uint32_t*)real_ptr);
 	new_ptr = realloc(real_ptr, s);
 	oom_test(new_ptr, s);
-	*((size_t*)new_ptr) = s;
+	*((uint32_t*)new_ptr) = s;
 	update_used_mem(s - old_size);
 	return (char*)new_ptr + MEM_PREFIX_SIZE;
 #else
@@ -76,7 +76,7 @@ void jfree(void* ptr) {
 #ifndef HAD_MEM_SIZE
 	void *real_ptr;
 	real_ptr = (char*)ptr - MEM_PREFIX_SIZE;
-	size = *((size_t*)real_ptr);
+	size = *((uint32_t*)real_ptr);
 	update_used_mem(-(size + MEM_PREFIX_SIZE));
 	free(real_ptr);
 #else

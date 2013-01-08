@@ -17,7 +17,10 @@ typedef int event_proc(cevents *evts, int fd, void *priv, int mask);
 
 typedef struct {
 	int mask;
-	//master thread process, if return -1 don't add to fired_queue
+	/*master thread process, if return 0 don't add to fired_queue.
+	 *if return 1, add event to fired queue. let backend thread process.
+	 *I wanna use master thread  for accpet and timeout operation.
+	 */
 	event_proc *master_proc;
 	event_proc *read_proc;
 	event_proc *write_proc;

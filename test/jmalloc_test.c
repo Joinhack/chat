@@ -10,7 +10,7 @@ void *malloc_test(void *p) {
 	size_t i,times = 50000;
 	for(i = 0; i < times; i++) {
 		ptr = jmalloc(10);
-		printf("%ld\n", get);
+		printf("%ld\n", used_mem());
 		ptr = jrealloc(ptr, 20);
 		printf("%ld\n", used_mem());
 		jfree(ptr);

@@ -8,5 +8,8 @@ cnet_test:
 cstr_test:
 	$(CC) -o cstr_test cstr_test.c ../src/cstr.c ../src/jmalloc.c -I$(INC) $(OPTS)
 
+jmalloc_test:
+	$(CC) -o jmalloc_test jmalloc_test.c -lpthread -DTHREAD_TEST ../src/jmalloc.c -I$(INC) 
+
 all: cstr_test cnet_test
 

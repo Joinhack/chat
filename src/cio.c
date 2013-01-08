@@ -1,5 +1,7 @@
 #include <unistd.h>
+#include <string.h>
 #include <sys/ioctl.h>
+#include "jmalloc.h"
 #include "cio.h"
 
 int cio_set_noblock(int fd) {
@@ -40,3 +42,12 @@ int cio_read(int fd, char *ptr, size_t len) {
 	return count;
 }
 
+cio *create_cio() {
+	cio *io = jmalloc(sizeof(cio));
+	memset(io, 0, sizeof(cio));
+	return io;
+}
+
+void destory_cio(cio *io) {
+	jfree(io);
+}
