@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <errno.h>
+ #include <signal.h>
 #include "jmalloc.h"
 #include "cthread.h"
 
@@ -13,15 +15,15 @@ void *thread_loop(void *data) {
 			thr->state = THR_EXIT;
 			return NULL;
 		}
-		spinlock_lock(&pool->idle_lock);
+		pthread_mutex_lock(&pool->mutex);
 		thr->state = THR_IDLE;
 		cqueue_push(pool->idle_queue, (void*)thr);
-		spinlock_unlock(&pool->idle_lock);
 		if(pthread_cond_wait(&thr->cond, &pool->mutex) < 0) {
 			//TODO: log it.
 			fprintf(stderr, "wait error\n");
 			return NULL;
 		}
+		pthread_mutex_unlock(&pool->mutex);
 		thr->state = THR_BUSY;
 		if(thr->proc)
 			thr->proc(thr->proc_data);
@@ -52,16 +54,21 @@ static int cthread_init(cthread *thr, cthr_pool *pool) {
 void destroy_cthr_pool(cthr_pool *pool) {
 	cthread *thr;
 	void *thr_ret;
-	int i;
+	int i, ret;
 	pool->state = THRP_EXIT;
 	for(i = 0; i < pool->size; i++) {
 		thr = pool->thrs + i;
-		if(thr->state != THR_EXIT) {
-			pthread_cond_signal(&thr->cond);
-			pthread_join(thr->thrid, &thr_ret);
-			pthread_cond_destroy(&thr->cond);
+		pthread_mutex_lock(&pool->mutex);
+		ret = pthread_cond_signal(&thr->cond);
+		pthread_mutex_unlock(&pool->mutex);
+		if(ret < 0) {
+			fprintf(stderr, "%s\n", strerror(errno));
 		}
+		pthread_join(thr->thrid, &thr_ret);
+		pthread_cond_destroy(&thr->cond);
 	}
+	pthread_mutex_destroy(&pool->mutex);
+	destroy_cqueue(pool->idle_queue);
 	jfree(pool->thrs);
 	jfree(pool);
 }
@@ -70,7 +77,6 @@ cthr_pool *create_cthr_pool(size_t size) {
 	int i, ret;
 	cthread *thr;
 	cthr_pool *pool = (cthr_pool *)jmalloc(sizeof(cthr_pool));
-	pool->idle_lock = SL_UNLOCK;
 	pool->thrs = jmalloc(sizeof(cthread)*size);
 	ret = pthread_mutex_init(&pool->mutex, NULL);
 	if(ret < 0) {
@@ -101,11 +107,12 @@ int cthr_pool_run_task(cthr_pool *pool, cthread_proc *proc, void *proc_data) {
 	cthread *thr;
 	if(cqueue_len(pool->idle_queue) == 0)
 		return -1;
-	spinlock_lock(&pool->idle_lock);
+
+	pthread_mutex_lock(&pool->mutex);
 	thr = (cthread*)cqueue_pop(pool->idle_queue);
 	thr->proc = proc;
 	thr->proc_data = proc_data;
-	spinlock_unlock(&pool->idle_lock);
 	pthread_cond_signal(&thr->cond);
+	pthread_mutex_unlock(&pool->mutex);
 	return 0;
 }

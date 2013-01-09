@@ -15,7 +15,7 @@ static cqueue_item *create_cqueue_item() {
 	return cq_item;
 }
 
-static void destory_cqueue_item(cqueue_item *item) {
+static void destroy_cqueue_item(cqueue_item *item) {
 	jfree(item);
 }
 
@@ -42,7 +42,7 @@ void *cqueue_pop(cqueue *cq) {
 	} else {
 		cq->head = NULL;
 	}
-	destory_cqueue_item(item);
+	destroy_cqueue_item(item);
 	return data;
 }
 
@@ -64,7 +64,7 @@ void cqueue_push(cqueue *cq, void *data) {
 	cq->count++;
 }
 
-void destory_cqueue(cqueue *cq) {
+void destroy_cqueue(cqueue *cq) {
 	while(cq->count > 0) {
 		cqueue_pop(cq);
 	}

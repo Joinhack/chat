@@ -3,7 +3,6 @@
 
 #include <pthread.h>
 #include "cqueue.h"
-#include "spinlock.h"
 
 #define THR_INIT 0x0
 #define THR_IDLE 0x1
@@ -27,7 +26,6 @@ typedef struct {
 
 typedef struct _thr_pool {
 	cqueue *idle_queue;
-	spinlock_t idle_lock;
 	cthread *thrs;
 	pthread_mutex_t mutex;
 	volatile int state;

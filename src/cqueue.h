@@ -15,7 +15,7 @@ typedef struct {
 } cqueue;
 
 cqueue *create_cqueue();
-void destory_cqueue(cqueue *cq);
+void destroy_cqueue(cqueue *cq);
 void *cqueue_pop(cqueue *cq);
 void cqueue_push(cqueue *cq, void *data);
 
