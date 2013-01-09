@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 INC = ../src
 OPTS =
 

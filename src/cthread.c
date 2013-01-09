@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <errno.h>
- #include <signal.h>
+#include <string.h>
+#include <signal.h>
 #include "jmalloc.h"
 #include "cthread.h"
 
