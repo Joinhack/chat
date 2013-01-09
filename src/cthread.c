@@ -92,7 +92,6 @@ cthr_pool *create_cthr_pool(size_t size) {
 	}
 	//wait for idle queue fill
 	while(cqueue_len(pool->idle_queue) != size);
-	printf("%ld\n", cqueue_len(pool->idle_queue));
 	pool->state = THRP_WORK;
 	return pool;
 }
