@@ -19,7 +19,7 @@ typedef void *cthread_proc(void *);
 typedef struct {
 	pthread_t thrid;
 	pthread_cond_t	cond;
-	int state;
+	volatile int state;
 	cthread_proc *proc;
 	void *proc_data;
 	struct _thr_pool *pool;
@@ -30,12 +30,12 @@ typedef struct _thr_pool {
 	spinlock_t idle_lock;
 	cthread *thrs;
 	pthread_mutex_t mutex;
-	int state;
+	volatile int state;
 	size_t size;
-} cthread_pool;
+} cthr_pool;
 
-cthread_pool *create_cthread_pool(size_t size);
-void destory_cthread_pool(cthread_pool *pool);
-int cthread_pool_submit_task(cthread_pool *pool, cthread_proc *proc, void *data);
+cthr_pool *create_cthr_pool(size_t size);
+void destroy_cthr_pool(cthr_pool *pool);
+int cthr_pool_run_task(cthr_pool *pool, cthread_proc *proc, void *data);
 
 #endif /*CTHREAD_H*/
