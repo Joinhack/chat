@@ -59,3 +59,7 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	}
 	return 0;
 }
+
+void *process_event(void *priv) {
+	cevents *cevts = (cevents*)priv;
+}

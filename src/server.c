@@ -1,17 +1,21 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include "jmalloc.h"
 #include "code.h"
 #include "cevent.h"
 #include "cnet.h"
 #include "cio.h"
+#include "cthread.h"
 #include "network.h"
-#include "jmalloc.h"
+
+
 
 typedef struct {
 	int in_fd;
 	int un_fd;
 	cevents *evts;
+	cthr_pool *thr_pool;
 } server;
 
 
@@ -39,6 +43,12 @@ static server *create_server() {
 		destroy_server(svr);
 		return NULL;
 	}
+	//TODO: set size from config
+	svr->thr_pool = create_cthr_pool(20);
+	if(svr->thr_pool == NULL) {
+		destroy_server(svr);
+		return NULL;
+	}
 	svr->evts = create_cevents();
 	fprintf(stdout, "use %s\n", svr->evts->impl_name);
 	return svr;
@@ -50,8 +60,14 @@ int server_init(server *svr) {
 }
 
 int mainLoop(server *svr) {
+	int ret, i;
 	for(;;) {
-		cevents_poll(svr->evts, 500);
+		ret = cevents_poll(svr->evts, 500);
+		if(ret > 0) {
+			for(i = 0; i < ret; i++) {
+				cthr_pool_run_task(svr->thr_pool, process_event, svr->evts);
+			}
+		}
 	}
 	return 0;
 }

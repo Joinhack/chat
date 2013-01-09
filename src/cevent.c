@@ -127,9 +127,9 @@ static cevent_fired *clone_cevent_fired(cevent_fired *fired) {
 	return new_cevent_fired;
 }
 
-//return J_OK or J_ERR
+//return push queue count or J_ERR
 int cevents_poll(cevents *cevts, msec_t ms) {
-	int ret, i;
+	int ret, i, count = 0;
 	cevent_fired *fired;
 	if(cevts == NULL) {
 		fprintf(stderr, "can't be happend\n");
@@ -145,7 +145,8 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 					continue;
 			}
 			cevents_push_fired(cevts, clone_cevent_fired(fired));
+			count++;
 		}
 	}
-	return J_OK;
+	return count;
 }
