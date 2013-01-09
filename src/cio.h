@@ -24,6 +24,6 @@ int cio_read(int fd, char *ptr, size_t len);
 
 cio *create_cio();
 
-void destory_cio(cio *io);
+void destroy_cio(cio *io);
 
 #endif /*end define common io**/

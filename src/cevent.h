@@ -43,7 +43,7 @@ struct _cevents {
 };
 
 cevents *create_cevents();
-void destory_cevents(cevents *cevts);
+void destroy_cevents(cevents *cevts);
 int cevents_add_event(cevents *cevts, int fd, int mask, event_proc *proc, void *priv);
 int cevents_del_event(cevents *cevts, int fd, int mask);
 int cevents_enable_event(cevents *cevts, int fd, int mask);

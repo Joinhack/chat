@@ -48,6 +48,6 @@ cio *create_cio() {
 	return io;
 }
 
-void destory_cio(cio *io) {
+void destroy_cio(cio *io) {
 	jfree(io);
 }

@@ -10,7 +10,7 @@ cstr create_cstr(size_t len) {
 	return (cstr)(c + HLEN);
 }
 
-void destory_cstr(cstr s) {
+void destroy_cstr(cstr s) {
 	char *ptr = CSTR_REALPTR(s);
 	jfree(ptr);
 }

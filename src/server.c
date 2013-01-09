@@ -27,7 +27,7 @@ int create_tcp_server() {
 	return fd;
 }
 
-static void destory_server(server *svr) {
+static void destroy_server(server *svr) {
 }
 
 static server *create_server() {
@@ -36,7 +36,7 @@ static server *create_server() {
 	memset(svr, 0, sizeof(server));
 	svr->in_fd = create_tcp_server();
 	if(svr->in_fd < 0) {
-		destory_server(svr);
+		destroy_server(svr);
 		return NULL;
 	}
 	svr->evts = create_cevents();

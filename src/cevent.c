@@ -7,7 +7,7 @@
 #include "code.h"
 
 static int cevents_create_priv_impl(cevents *cevts);
-static int cevents_destory_priv_impl(cevents *cevts);
+static int cevents_destroy_priv_impl(cevents *cevts);
 static int cevents_add_event_impl(cevents *cevts, int fd, int mask);
 static int cevents_del_event_impl(cevents *cevts, int fd, int mask);
 static int cevents_poll_impl(cevents *cevts, msec_t ms);
@@ -57,7 +57,7 @@ cevents *create_cevents() {
 	return evts;
 }
 
-void destory_cevents(cevents *cevts) {
+void destroy_cevents(cevents *cevts) {
 	if(cevts == NULL)
 		return;
 	if(cevts->events != NULL)
@@ -65,12 +65,12 @@ void destory_cevents(cevents *cevts) {
 	if(cevts->fired != NULL)
 		jfree(cevts->fired);
 	if(cevts->fired_queue != NULL)
-		destory_cqueue(cevts->fired_queue);
+		destroy_cqueue(cevts->fired_queue);
 	cevts->fired_lock = SL_UNLOCK;
 	cevts->events = NULL;
 	cevts->fired = NULL;
 	cevts->fired_queue = NULL;
-	cevents_destory_priv_impl(cevts);
+	cevents_destroy_priv_impl(cevts);
 	jfree(cevts);
 }
 

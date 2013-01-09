@@ -5,7 +5,7 @@
 #include "cthread.h"
 
 static cthread *create_cthread(cthr_pool *p);
-static void destory_cthread(cthread  *thr);
+static void destroy_cthread(cthread  *thr);
 
 void *thread_loop(void *data) {
 	cthread *thr = (cthread*)data;

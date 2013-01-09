@@ -16,7 +16,7 @@ static int cevents_create_priv_impl(cevents *cevts) {
 	return 0;
 }
 
-static int cevents_destory_priv_impl(cevents *cevts) {
+static int cevents_destroy_priv_impl(cevents *cevts) {
 	jfree(cevts->priv_data);
 	cevts->priv_data = NULL;
 	return 0;
