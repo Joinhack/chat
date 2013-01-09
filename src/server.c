@@ -9,8 +9,6 @@
 #include "cthread.h"
 #include "network.h"
 
-
-
 typedef struct {
 	int in_fd;
 	int un_fd;
@@ -60,12 +58,15 @@ int server_init(server *svr) {
 }
 
 int mainLoop(server *svr) {
-	int ret, i;
+	int ev_num, i, ret;
 	for(;;) {
-		ret = cevents_poll(svr->evts, 500);
-		if(ret > 0) {
-			for(i = 0; i < ret; i++) {
-				cthr_pool_run_task(svr->thr_pool, process_event, svr->evts);
+		ev_num = cevents_poll(svr->evts, 500);
+		if(ev_num > 0) {
+			for(i = 0; i < ev_num; i++) {
+				//all threads is working.
+				if(cthr_pool_run_task(svr->thr_pool, process_event, svr->evts) == -1) {
+					return 0;
+				}
 			}
 		}
 	}
