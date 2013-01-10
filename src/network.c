@@ -63,8 +63,13 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 				//	return cevents_enable_event(cevts, fd, CEV_READ);
 			}
 		}
+		if(ret == 0) {
+			//close connection
+			close(io->fd);
+			destroy_cio(io);
+			break;
+		}
 	}
-	printf("......\n");
 	return 0;
 }
 

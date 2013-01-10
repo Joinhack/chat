@@ -148,7 +148,6 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 			if(!master_fired_event_proc(cevts, fired)) {
 					continue;
 			}
-			fprintf(stderr, "----\n");
 			cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
 			count++;
 		}
