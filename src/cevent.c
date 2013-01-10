@@ -120,10 +120,14 @@ int cevents_disable_event(cevents *cevts, int fd, int mask) {
 	return cevents_del_event_impl(cevts, fd, mask);
 }
 
-static cevent_fired *clone_cevent_fired(cevent_fired *fired) {
+static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
+	cevent *cevent = cevts->events + fired->fd;
 	cevent_fired *new_cevent_fired = jmalloc(sizeof(cevent_fired));
 	new_cevent_fired->fd = fired->fd;
 	new_cevent_fired->mask = fired->mask;
+	new_cevent_fired->read_proc = cevent->read_proc;
+	new_cevent_fired->write_proc = cevent->write_proc;
+	new_cevent_fired->priv = cevent->priv;
 	return new_cevent_fired;
 }
 
@@ -144,7 +148,8 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 			if(!master_fired_event_proc(cevts, fired)) {
 					continue;
 			}
-			cevents_push_fired(cevts, clone_cevent_fired(fired));
+			fprintf(stderr, "----\n");
+			cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
 			count++;
 		}
 	}

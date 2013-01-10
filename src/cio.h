@@ -10,8 +10,6 @@
 typedef struct {
 	int fd;
 	int type;
-	size_t rcount;
-	size_t wcount;
 } cio;
 
 int cio_set_noblock(int fd);

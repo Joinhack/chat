@@ -30,6 +30,8 @@ static int cnet_accept_impl(int fd, struct sockaddr *sa, socklen_t *len,char *eb
 				return -1;
 			}
 		}
+		//setup aio;
+		cio_set_noblock(clifd);
 		return clifd;
 	}
 }

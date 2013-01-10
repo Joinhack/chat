@@ -30,6 +30,9 @@ typedef struct {
 typedef struct {
 	int mask;
 	int fd;
+	event_proc *read_proc;
+	event_proc *write_proc;
+	void *priv;
 } cevent_fired;
 
 struct _cevents {

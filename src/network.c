@@ -48,19 +48,43 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int ret;
 	cio *io = (cio*)priv;
 	char buff[1024];
-	ret = cio_read(fd, buff, 1024);
-	if(ret < 0) {
-		if(errno == EAGAIN) {
-			printf("%d\n", errno);
-			return cevents_enable_event(cevts, fd, CEV_READ);
+	while(1) {
+		ret = read(fd, buff, 1024);
+		if(ret < 0) {
+			if(errno == EAGAIN) {
+				return cevents_enable_event(cevts, fd, CEV_READ);
+			}
 		}
-	} else {
-		ret = cio_write(fd, buff, ret);
+		if(ret > 0) {
+			ret = write(fd, buff, ret);
+			if(ret < 0) {
+				//install write event
+				//if(errno == EAGAIN)
+				//	return cevents_enable_event(cevts, fd, CEV_READ);
+			}
+		}
 	}
+	printf("......\n");
 	return 0;
 }
 
 void *process_event(void *priv) {
+	int ret;
 	cevents *cevts = (cevents*)priv;
-	
+	cevent_fired *evt_fired, evt;
+	while((evt_fired = (cevent_fired*)cqueue_pop(cevts->fired_queue)) != NULL) {
+		//copy it, and destroy it.
+		evt = *evt_fired;
+		jfree(evt_fired);
+		if(evt.mask & CEV_READ) {
+			ret = evt.read_proc(cevts, evt.fd, evt.priv, evt.mask);
+			if(ret < 0)
+				break;
+		}
+		if(evt.mask & CEV_WRITE) {
+			ret = evt.write_proc(cevts, evt.fd, evt.priv, evt.mask);
+			if(ret < 0)
+				break;
+		}
+	}
 }
