@@ -100,10 +100,8 @@ int cevents_del_event(cevents *cevts, int fd, int mask) {
 	cevent *evt = cevts->events + fd;
 	//don't unbind the method, maybe should be used again.
 
-	if (evt->mask == CEV_NONE) return;
+	if (evt->mask == CEV_NONE) return 0;
 	evt->mask &= ~mask; //remove mask
-	
-	printf("0000000000000000\n");
 	//change maxfd
 	if(cevts->maxfd == fd && evt->mask == CEV_NONE) {
 		for(j = cevts->maxfd - 1; j >= 0; j--) {
@@ -113,7 +111,6 @@ int cevents_del_event(cevents *cevts, int fd, int mask) {
 			}
 		}
 	}
-	printf("00000000000000001\n");
 	return cevents_del_event_impl(cevts, fd, mask);
 }
 
@@ -162,14 +159,11 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 	if(ret > 0) {
 		for(i = 0; i < ret; i++) {
 			fired = cevts->fired + i;
-			printf("xxxinxx\n");
 			if(!master_preproc(cevts, fired)) {
 					continue;
 			}
-			printf("xxxoutxx\n");
 			cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
 			count++;
-			printf("fired mask %d\n", fired->mask);
 		}
 	}
 	return count;

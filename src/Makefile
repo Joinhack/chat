@@ -1,10 +1,10 @@
 CC=gcc
-CFLGAS=-std=c99
+CFLAGS=-std=c99
 OPTS = -lpthread -g 
 
 
 .c.o:
-	$(CC) -c $<  $(CFALGS)
+	$(CC) -c $<  $(CFLAGS)
 
 all: server
 

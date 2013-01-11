@@ -2,10 +2,13 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include "jmalloc.h"
 #include "cevent.h"
 #include "cnet.h"
 #include "cio.h"
 #include "network.h"
+
+static int cio_install_read_events(cevents *cevts, cio *io);
 
 //always return 0, don't push fired event queue
 int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
@@ -20,7 +23,6 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		fprintf(stderr, "%s\n", buff);
 		return -1;
 	}
-	printf("clifd %d\n", clifd);
 	//TODO: maybe there add cio queue.
 	io = cio_create();
 	io->fd = clifd;
@@ -40,8 +42,7 @@ static void cio_close_destroy(cevents *evts, cio *io) {
 int event_prev_proc(cevents *cevts, int fd, void *priv, int mask) {
 	//TODO: process the ret value.
 	int ret;
-	printf("xxxxxxxxxx-\n");
-	ret = cevents_del_event(cevts, fd, CEV_READ);
+	ret = cevents_del_event(cevts, fd, CEV_READ|CEV_WRITE);
 	return 1;
 }
 
@@ -92,7 +93,7 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	return 0;
 }
 
-int cio_install_read_events(cevents *cevts, cio *io) {
+static int cio_install_read_events(cevents *cevts, cio *io) {
 	//TODO: process the ret value.
 	int ret;
 	cevents_set_master_preproc(cevts, io->fd, event_prev_proc);
@@ -104,12 +105,12 @@ void *process_event(void *priv) {
 	int ret;
 	cevents *cevts = (cevents*)priv;
 	cevent_fired *evt_fired, evt;
-	printf("qlen %d\n", cqueue_len(cevts->fired_queue));
 	while((evt_fired = (cevent_fired*)cqueue_pop(cevts->fired_queue)) != NULL) {
+		if(evt_fired == NULL)
+			return NULL;
 		//copy it, and destroy it.
 		evt = *evt_fired;
 		jfree(evt_fired);
-		printf("%d\n", evt.fd);
 		if(evt.mask & CEV_READ) {
 			ret = evt.read_proc(cevts, evt.fd, evt.priv, evt.mask);
 			if(ret < 0)

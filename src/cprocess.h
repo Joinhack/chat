@@ -5,6 +5,7 @@
 #include <sched.h>
 #define CSCHED_YIELD()  sched_yield()
 #else
+#include <unistd.h>
 #define CSCHED_YIELD()  usleep(1)
 #endif
 

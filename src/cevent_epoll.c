@@ -35,7 +35,6 @@ static int cevents_add_event_impl(cevents *cevts, int fd, int mask) {
 	if(mask & CEV_READ) ep_event.events |= EPOLLIN;
 	if(mask & CEV_WRITE) ep_event.events |= EPOLLOUT;
 	ep_event.data.fd = fd;
-	printf("add op %d, %d \n",  operation, EPOLL_CTL_MOD);
 	return epoll_ctl(priv->epfd, operation, fd, &ep_event);
 }
 
@@ -51,7 +50,6 @@ static int cevents_del_event_impl(cevents *cevts, int fd, int mask) {
 	if(old_mask & CEV_READ || old_mask & CEV_WRITE)
 		operation = EPOLL_CTL_MOD;
 	ep_event.data.fd = fd;
-	printf("del op %d %d\n", operation, EPOLL_CTL_MOD);
 	return epoll_ctl(priv->epfd, operation, fd, &ep_event);
 }
 

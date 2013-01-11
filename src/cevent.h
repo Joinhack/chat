@@ -52,7 +52,8 @@ int cevents_poll(cevents *cevts, msec_t ms);
 void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_preproc);
 void cevents_push_fired(cevents *cevts, cevent_fired *fired);
 cevent_fired *cevents_pop_fired(cevents *cevts);
-int cevents_rebind_event(cevents *cevts, int fd, int mask);
+int cevents_enable_event(cevents *cevts, int fd, int mask);
+int cevents_disable_event(cevents *cevts, int fd, int mask);
 
 
 #endif /*end define cevent**/
