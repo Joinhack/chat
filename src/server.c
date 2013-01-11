@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+ #include <unistd.h>
 #include "jmalloc.h"
 #include "code.h"
 #include "cevent.h"
@@ -42,18 +43,19 @@ static server *create_server() {
 		return NULL;
 	}
 	//TODO: set size from config
-	svr->thr_pool = create_cthr_pool(20);
+	svr->thr_pool = cthr_pool_create(20);
 	if(svr->thr_pool == NULL) {
 		destroy_server(svr);
 		return NULL;
 	}
-	svr->evts = create_cevents();
+	svr->evts = cevents_create();
 	fprintf(stdout, "use %s\n", svr->evts->impl_name);
 	return svr;
 }
 
 int server_init(server *svr) {
-	cevents_add_event(svr->evts, svr->in_fd, CEV_MASTER|CEV_READ, tcp_accept_event_proc, svr);
+	cevents_set_master_preproc(svr->evts, svr->in_fd, tcp_accept_event_proc);
+	cevents_add_event(svr->evts, svr->in_fd, CEV_READ, NULL, svr);
 	return 0;
 }
 

@@ -4,13 +4,13 @@
 #include "jmalloc.h"
 #include "cstr.h"
 
-cstr create_cstr(size_t len) {
+cstr cstr_create(size_t len) {
 	char *c = jmalloc(len + HLEN);
 	(*(uint32_t*)c) = len;
 	return (cstr)(c + HLEN);
 }
 
-void destroy_cstr(cstr s) {
+void cstr_destroy(cstr s) {
 	char *ptr = CSTR_REALPTR(s);
 	jfree(ptr);
 }

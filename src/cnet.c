@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/un.h>
+#include "cio.h"
 #include "cnet.h"
 
 static void cnet_fmt_err(char *err, size_t len, const char *fmt, ...) {

@@ -28,13 +28,14 @@ static int cevents_add_event_impl(cevents *cevts, int fd, int mask) {
 	struct epoll_event ep_event;
 	memset(&ep_event, 0, sizeof(struct epoll_event));
 	epoll_priv *priv = (epoll_priv*)cevts->priv_data;
-	if(old_mask != CEV_NONE)
+	if(old_mask & CEV_READ || old_mask & CEV_WRITE)
 		operation = EPOLL_CTL_MOD;
 	//set old mask;
 	mask |= old_mask;
 	if(mask & CEV_READ) ep_event.events |= EPOLLIN;
 	if(mask & CEV_WRITE) ep_event.events |= EPOLLOUT;
 	ep_event.data.fd = fd;
+	printf("add op %d, %d \n",  operation, EPOLL_CTL_MOD);
 	return epoll_ctl(priv->epfd, operation, fd, &ep_event);
 }
 
@@ -47,10 +48,11 @@ static int cevents_del_event_impl(cevents *cevts, int fd, int mask) {
 	old_mask &= ~mask;
 	if(old_mask & CEV_READ) ep_event.events |= EPOLLIN;
 	if(old_mask & CEV_WRITE) ep_event.events |= EPOLLOUT;
-	if(old_mask != CEV_NONE)
+	if(old_mask & CEV_READ || old_mask & CEV_WRITE)
 		operation = EPOLL_CTL_MOD;
 	ep_event.data.fd = fd;
-	return epoll_ctl(priv->epfd, EPOLL_CTL_MOD, fd, &ep_event);
+	printf("del op %d %d\n", operation, EPOLL_CTL_MOD);
+	return epoll_ctl(priv->epfd, operation, fd, &ep_event);
 }
 
 
@@ -58,7 +60,6 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 	epoll_priv *priv = (epoll_priv*)cevts->priv_data;
 	int rs, i, mask, count = 0;
 	struct epoll_event *ep_event;
-	cevent *event;
 	cevent_fired *fired;
 	rs = epoll_wait(priv->epfd, priv->events, MAX_EVENTS, ms);
 	if(rs > 0) {
@@ -68,13 +69,9 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 			fired = cevts->fired + count;
 			if (ep_event->events & EPOLLIN) 
 				mask |= CEV_READ;
-			if (ep_event->events & EPOLLIN) 
-				mask |= CEV_READ;
+			if (ep_event->events & EPOLLOUT) 
+				mask |= CEV_WRITE;
 			fired->fd = ep_event->data.fd;
-			event = cevts->events + fired->fd;
-			if(event->mask & CEV_MASTER) 
-				mask |= CEV_MASTER;
-
 			fired->mask = mask;
 			count++;
 		}

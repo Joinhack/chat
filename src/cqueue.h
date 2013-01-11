@@ -14,8 +14,8 @@ typedef struct {
 	size_t count;
 } cqueue;
 
-cqueue *create_cqueue();
-void destroy_cqueue(cqueue *cq);
+cqueue *cqueue_create();
+void cqueue_destroy(cqueue *cq);
 void *cqueue_pop(cqueue *cq);
 void cqueue_push(cqueue *cq, void *data);
 

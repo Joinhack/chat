@@ -9,7 +9,6 @@
 #define CEV_NONE 0x0
 #define CEV_READ 0x1
 #define CEV_WRITE 0x1<<1
-#define CEV_MASTER 0x1<<2
 
 typedef struct _cevents cevents;
 
@@ -21,7 +20,7 @@ typedef struct {
 	 *if return 1, add event to fired queue. let backend thread process.
 	 *I wanna use master thread  for accpet and timeout operation.
 	 */
-	event_proc *master_proc;
+	event_proc *master_preproc;
 	event_proc *read_proc;
 	event_proc *write_proc;
 	void *priv;
@@ -45,15 +44,15 @@ struct _cevents {
 	void *priv_data; //use for implement data.
 };
 
-cevents *create_cevents();
-void destroy_cevents(cevents *cevts);
+cevents *cevents_create();
+void cevents_destroy(cevents *cevts);
 int cevents_add_event(cevents *cevts, int fd, int mask, event_proc *proc, void *priv);
 int cevents_del_event(cevents *cevts, int fd, int mask);
-int cevents_enable_event(cevents *cevts, int fd, int mask);
-int cevents_disable_event(cevents *cevts, int fd, int mask);
 int cevents_poll(cevents *cevts, msec_t ms);
+void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_preproc);
 void cevents_push_fired(cevents *cevts, cevent_fired *fired);
 cevent_fired *cevents_pop_fired(cevents *cevts);
+int cevents_rebind_event(cevents *cevts, int fd, int mask);
 
 
 #endif /*end define cevent**/

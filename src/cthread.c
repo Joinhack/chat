@@ -5,8 +5,8 @@
 #include "jmalloc.h"
 #include "cthread.h"
 
-static cthread *create_cthread(cthr_pool *p);
-static void destroy_cthread(cthread  *thr);
+static cthread *cthread_create(cthr_pool *p);
+static void cthread_destroy(cthread  *thr);
 
 void *thread_loop(void *data) {
 	cthread *thr = (cthread*)data;
@@ -52,7 +52,7 @@ static int cthread_init(cthread *thr, cthr_pool *pool) {
 	return 0;
 }
 
-void destroy_cthr_pool(cthr_pool *pool) {
+void cthr_pool_destroy(cthr_pool *pool) {
 	cthread *thr;
 	void *thr_ret;
 	int i, ret;
@@ -69,12 +69,12 @@ void destroy_cthr_pool(cthr_pool *pool) {
 		pthread_cond_destroy(&thr->cond);
 	}
 	pthread_mutex_destroy(&pool->mutex);
-	destroy_cqueue(pool->idle_queue);
+	cqueue_destroy(pool->idle_queue);
 	jfree(pool->thrs);
 	jfree(pool);
 }
 
-cthr_pool *create_cthr_pool(size_t size) {
+cthr_pool *cthr_pool_create(size_t size) {
 	int i, ret;
 	cthread *thr;
 	cthr_pool *pool = (cthr_pool *)jmalloc(sizeof(cthr_pool));
@@ -87,12 +87,12 @@ cthr_pool *create_cthr_pool(size_t size) {
 		return NULL;
 	}
 	pool->size = 0;
-	pool->idle_queue = create_cqueue();
+	pool->idle_queue = cqueue_create();
 	pool->state = THRP_WORK;
 	for(i = 0; i <  size; i++) {
 		thr = pool->thrs + i;
 		if(cthread_init(thr, pool) < 0) {
-			destroy_cthr_pool(pool);
+			cthr_pool_destroy(pool);
 			return NULL;
 		}
 		pool->size++;

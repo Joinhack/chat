@@ -3,7 +3,7 @@
 #include "jmalloc.h"
 #include "cqueue.h"
 
-static cqueue_item *create_cqueue_item() {
+static cqueue_item *cqueue_item_create() {
 	cqueue_item *cq_item;
 	size_t len = sizeof(cqueue_item);
 	cq_item = jmalloc(len);
@@ -15,11 +15,11 @@ static cqueue_item *create_cqueue_item() {
 	return cq_item;
 }
 
-static void destroy_cqueue_item(cqueue_item *item) {
+static void cqueue_item_destroy(cqueue_item *item) {
 	jfree(item);
 }
 
-cqueue *create_cqueue() {
+cqueue *cqueue_create() {
 	cqueue *cq;
 	size_t len = sizeof(cqueue);
 	cq = jmalloc(len);
@@ -42,13 +42,13 @@ void *cqueue_pop(cqueue *cq) {
 	} else {
 		cq->head = NULL;
 	}
-	destroy_cqueue_item(item);
+	cqueue_item_destroy(item);
 	return data;
 }
 
 void cqueue_push(cqueue *cq, void *data) {
 	cqueue_item *item, *hprev;
-	item = create_cqueue_item();
+	item = cqueue_item_create();
 	item->data = data;
 	if(cq->head != NULL) {
 		hprev = cq->head->prev;
@@ -64,7 +64,7 @@ void cqueue_push(cqueue *cq, void *data) {
 	cq->count++;
 }
 
-void destroy_cqueue(cqueue *cq) {
+void cqueue_destroy(cqueue *cq) {
 	while(cq->count > 0) {
 		cqueue_pop(cq);
 	}

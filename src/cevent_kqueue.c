@@ -62,9 +62,7 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 	int rs, i, mask, count = 0;
 	cevent_fired *fired;
 	struct kevent *kevt;
-	cevent *event;
 	rs = kevent(priv->kqfd, NULL, 0, priv->events, MAX_EVENTS, NULL);
-
 	if(rs > 0) {
 		for(i = 0; i < rs; i++) {
 			mask = CEV_NONE;
@@ -75,9 +73,6 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 			if(kevt->filter == EVFILT_WRITE)
 				mask |= CEV_WRITE;
 			fired->fd = kevt->ident;
-			event = cevts->events + fired->fd;
-			if(event->mask & CEV_MASTER) 
-				mask |= CEV_MASTER;
 			fired->mask = mask;
 			count++;
 		}

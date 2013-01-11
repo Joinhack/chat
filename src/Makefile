@@ -1,7 +1,16 @@
-CC = gcc
-OPTS = -lpthread
+CC=gcc
+CFLGAS=-std=c99
+OPTS = -lpthread -g 
+
+
+.c.o:
+	$(CC) -c $<  $(CFALGS)
 
 all: server
 
-server:
-	$(CC) -o server server.c cnet.c  cqueue.c cevent.c jmalloc.c cio.c  network.c spinlock.c cthread.c $(OPTS) 
+clean:
+	rm *.o
+	rm server
+
+server: server.o cnet.o cqueue.o cevent.o jmalloc.o cio.o network.o spinlock.o cthread.o cstr.o
+	$(CC) -o server $^ $(OPTS) 

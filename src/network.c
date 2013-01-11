@@ -18,69 +18,98 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	memset(ip, 0, sizeof(ip));
 	if((clifd = cnet_tcp_accept(fd, ip, &port, buff, sizeof(buff))) < 0) {
 		fprintf(stderr, "%s\n", buff);
+		return -1;
 	}
+	printf("clifd %d\n", clifd);
 	//TODO: maybe there add cio queue.
-	io = create_cio();
+	io = cio_create();
 	io->fd = clifd;
 	io->type = IO_TCP;
-	cio_install_read_event(cevts, io);
+	cio_install_read_events(cevts, io);
 	return 0;
 }
 
+static void cio_close_destroy(cevents *evts, cio *io) {
+	//del event
+	cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE);
+	close(io->fd);
+	cio_destroy(io);
+}
+
 //disable fire read event for this fd. let the backend thread read.
-int read_event_prev_proc(cevents *cevts, int fd, void *priv, int mask) {
+int event_prev_proc(cevents *cevts, int fd, void *priv, int mask) {
 	//TODO: process the ret value.
 	int ret;
-	ret = cevents_disable_event(cevts, fd, CEV_READ);
+	printf("xxxxxxxxxx-\n");
+	ret = cevents_del_event(cevts, fd, CEV_READ);
 	return 1;
 }
 
-int cio_install_read_event(cevents *cevts, cio *io) {
-	//TODO: process the ret value.
+int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int ret;
-	ret = cevents_add_event(cevts, io->fd, CEV_MASTER, read_event_prev_proc, io);
-	ret = cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
-	return ret;
+	cio *io = (cio*)priv;
+	while(io->nwrite != io->nread) {
+		if(io->nread > 0) {
+			ret = write(fd, io->buff + io->nwrite, io->nread - io->nwrite);
+			if(ret < 0) {
+				//install write event
+				if(errno == EAGAIN)
+					return cevents_rebind_event(cevts, fd, CEV_WRITE);
+				cio_close_destroy(cevts, io);
+				return -1;
+			}
+			io->nwrite += ret;
+			if(ret == 0) {
+				cio_close_destroy(cevts, io);
+				return 0;
+			}
+		}
+	}
+	io->nread = 0;
+	ret = cevents_rebind_event(cevts, fd, CEV_READ);
+	return 0;
 }
 
 //just for test.
 int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
-	int ret;
 	cio *io = (cio*)priv;
-	char buff[1024];
-	while(1) {
-		ret = read(fd, buff, 1024);
-		if(ret < 0) {
-			if(errno == EAGAIN) {
-				return cevents_enable_event(cevts, fd, CEV_READ);
-			}
+	int ret, nread;
+	nread = read(fd, io->buff, cstr_len(io->buff));
+	if(nread < 0) {
+		if(errno == EAGAIN) {
+			return cevents_rebind_event(cevts, fd, CEV_READ);
 		}
-		if(ret > 0) {
-			ret = write(fd, buff, ret);
-			if(ret < 0) {
-				//install write event
-				//if(errno == EAGAIN)
-				//	return cevents_enable_event(cevts, fd, CEV_READ);
-			}
-		}
-		if(ret == 0) {
-			//close connection
-			close(io->fd);
-			destroy_cio(io);
-			break;
-		}
+		cio_close_destroy(cevts, io);
+		return -1;
 	}
+	if(nread == 0) {
+		cio_close_destroy(cevts, io);
+		return 0;
+	}
+	io->nread += nread;
+	io->nwrite = 0;
+	cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
 	return 0;
+}
+
+int cio_install_read_events(cevents *cevts, cio *io) {
+	//TODO: process the ret value.
+	int ret;
+	cevents_set_master_preproc(cevts, io->fd, event_prev_proc);
+	ret = cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+	return ret;
 }
 
 void *process_event(void *priv) {
 	int ret;
 	cevents *cevts = (cevents*)priv;
 	cevent_fired *evt_fired, evt;
+	printf("qlen %d\n", cqueue_len(cevts->fired_queue));
 	while((evt_fired = (cevent_fired*)cqueue_pop(cevts->fired_queue)) != NULL) {
 		//copy it, and destroy it.
 		evt = *evt_fired;
 		jfree(evt_fired);
+		printf("%d\n", evt.fd);
 		if(evt.mask & CEV_READ) {
 			ret = evt.read_proc(cevts, evt.fd, evt.priv, evt.mask);
 			if(ret < 0)

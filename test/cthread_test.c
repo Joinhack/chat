@@ -12,10 +12,10 @@ void *print_test(void *data) {
 
 int main(int argc, char const *argv[]) {
 	int i, ret;
-	cthr_pool *pool = create_cthr_pool(10);
+	cthr_pool *pool = cthr_pool_create(10);
 	for(i = 0; i < 1000000; i++) {
 		cthr_pool_run_task(pool, print_test, NULL);
 	}
-	destroy_cthr_pool(pool);
+	cthr_pool_destroy(pool);
 	return 0;
 }

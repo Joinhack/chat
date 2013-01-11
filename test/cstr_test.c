@@ -3,8 +3,8 @@
 #include <cstr.h>
 
 int main(int argc, char const *argv[]) {
-	cstr s = create_cstr(1024);
+	cstr s = cstr_create(1024);
 	printf("%d \n", cstr_len(s));
-	destory_cstr(s);
+	cstr_destroy(s);
 	return 0;
 }

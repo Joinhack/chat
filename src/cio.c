@@ -42,12 +42,14 @@ int cio_read(int fd, char *ptr, size_t len) {
 	return count;
 }
 
-cio *create_cio() {
+cio *cio_create() {
 	cio *io = jmalloc(sizeof(cio));
 	memset(io, 0, sizeof(cio));
+	io->buff = cstr_create(1024);
 	return io;
 }
 
-void destroy_cio(cio *io) {
+void cio_destroy(cio *io) {
+	cstr_destroy(io->buff);
 	jfree(io);
 }
