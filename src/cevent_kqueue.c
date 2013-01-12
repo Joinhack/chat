@@ -26,6 +26,7 @@ static int cevents_destroy_priv_impl(cevents *cevts) {
 static int cevents_add_event_impl(cevents *cevts, int fd, int mask) {
 	kqueue_priv *priv = (kqueue_priv*)cevts->priv_data;
 	struct kevent kevt;
+	printf("fd %d, add evt %d\n", fd, mask);
 	memset(&kevt, 0, sizeof(kevt));
 	if (mask & CEV_READ) {
 		EV_SET(&kevt, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
@@ -40,17 +41,20 @@ static int cevents_add_event_impl(cevents *cevts, int fd, int mask) {
 	return 0;
 }
 
-static int cevents_del_event_impl(cevents *cevts, int fd, int mask) {
+static int cevents_del_event_impl(cevents *cevts, int fd, int delmask) {
 	kqueue_priv *priv = (kqueue_priv*)cevts->priv_data;
 	struct kevent kevt;
+	int mask = (cevts->events + fd)->mask;
 	memset(&kevt, 0, sizeof(kevt));
-	if (mask & CEV_READ) {
+	printf("fd %d, del evt %d\n", fd, mask);
+	if (delmask & CEV_READ && mask & CEV_READ) {
 		EV_SET(&kevt, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 		if (kevent(priv->kqfd, &kevt, 1, NULL, 0, NULL) == -1) 
 			return -1;
 	}
-	if (mask & CEV_WRITE) {
+	if (delmask & CEV_WRITE && mask & CEV_WRITE) {
 		EV_SET(&kevt, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+		fprintf(stderr, "---------------\n");
 		if (kevent(priv->kqfd, &kevt, 1, NULL, 0, NULL) == -1) 
 			return -1;
 	}
