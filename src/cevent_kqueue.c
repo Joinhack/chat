@@ -54,7 +54,6 @@ static int cevents_del_event_impl(cevents *cevts, int fd, int delmask) {
 	}
 	if (delmask & CEV_WRITE && mask & CEV_WRITE) {
 		EV_SET(&kevt, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-		fprintf(stderr, "---------------\n");
 		if (kevent(priv->kqfd, &kevt, 1, NULL, 0, NULL) == -1) 
 			return -1;
 	}
@@ -66,7 +65,10 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 	int rs, i, mask, count = 0;
 	cevent_fired *fired;
 	struct kevent *kevt;
-	rs = kevent(priv->kqfd, NULL, 0, priv->events, MAX_EVENTS, NULL);
+	struct timespec timeout;
+	timeout.tv_sec = (long) (ms / 1000);
+	timeout.tv_nsec = (long) (ms % 1000);
+	rs = kevent(priv->kqfd, NULL, 0, priv->events, MAX_EVENTS, &timeout);
 	if(rs > 0) {
 		for(i = 0; i < rs; i++) {
 			mask = CEV_NONE;
