@@ -106,11 +106,12 @@ cthr_pool *cthr_pool_create(size_t size) {
 //return -1, all thread is busy
 int cthr_pool_run_task(cthr_pool *pool, cthread_proc *proc, void *proc_data) {
 	cthread *thr;
-	if(cqueue_len(pool->idle_queue) == 0)
-		return -1;
-
 	pthread_mutex_lock(&pool->mutex);
 	thr = (cthread*)cqueue_pop(pool->idle_queue);
+	if(thr == NULL) {
+		pthread_mutex_unlock(&pool->mutex);
+		return -1;
+	}
 	thr->proc = proc;
 	thr->proc_data = proc_data;
 	pthread_cond_signal(&thr->cond);

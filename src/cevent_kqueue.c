@@ -46,7 +46,7 @@ static int cevents_del_event_impl(cevents *cevts, int fd, int delmask) {
 	struct kevent kevt;
 	int mask = (cevts->events + fd)->mask;
 	memset(&kevt, 0, sizeof(kevt));
-	printf("fd %d, del evt %d\n", fd, mask);
+	printf("fd %d, del evt %d\n", fd, delmask);
 	if (delmask & CEV_READ && mask & CEV_READ) {
 		EV_SET(&kevt, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
 		if (kevent(priv->kqfd, &kevt, 1, NULL, 0, NULL) == -1) 

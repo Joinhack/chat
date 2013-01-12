@@ -101,6 +101,9 @@ int cevents_del_event(cevents *cevts, int fd, int mask) {
 	//don't unbind the method, maybe should be used again.
 
 	if (evt->mask == CEV_NONE) return 0;
+
+	//ignore error
+	cevents_del_event_impl(cevts, fd, mask);
 	evt->mask &= ~mask; //remove mask
 	//change maxfd
 	if(cevts->maxfd == fd && evt->mask == CEV_NONE) {
@@ -111,7 +114,7 @@ int cevents_del_event(cevents *cevts, int fd, int mask) {
 			}
 		}
 	}
-	return cevents_del_event_impl(cevts, fd, mask);
+	return 0;
 }
 
 int cevents_rebind_event(cevents *cevts, int fd, int mask) {
@@ -148,11 +151,12 @@ static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
 //return push queue count or J_ERR
 int cevents_poll(cevents *cevts, msec_t ms) {
 	int ret, i, count = 0;
-	cevent_fired *fired;
+	cevent_fired *fired, f;
 	if(cevts == NULL) {
 		fprintf(stderr, "can't be happend\n");
 		abort();
 	}
+	fired = &f;
 	ret = cevents_poll_impl(cevts, ms);
 	if(ret == J_ERR)
 		return J_ERR;

@@ -43,6 +43,9 @@ int event_prev_proc(cevents *cevts, int fd, void *priv, int mask) {
 	//TODO: process the ret value.
 	int ret;
 	ret = cevents_del_event(cevts, fd, CEV_READ|CEV_WRITE);
+	if(ret < 0) {
+		fprintf(stderr, "%s\n", strerror(errno));
+	}
 	return 1;
 }
 
@@ -122,4 +125,5 @@ void *process_event(void *priv) {
 				break;
 		}
 	}
+	return NULL;
 }

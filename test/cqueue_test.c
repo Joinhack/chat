@@ -13,25 +13,21 @@ spinlock_t lock;
 
 void *cqueue_pop_mt(void *data) {
 	size_t i = 0;
-	for(i = 0; i < 100000; i++) {
+	while(1) {
 		spinlock_lock(&lock);
-		cqueue_push(cq, NULL);
+		count++;
+		fprintf(stdout, "%ld pop %ld\n", pthread_self(), cqueue_len(cq));
+		cqueue_pop(cq);
 		spinlock_unlock(&lock);
 	}
-	spinlock_lock(&lock);
-	while(cqueue_len(cq) > 0) {
-		count++;
-		fprintf(stdout, "%ld pop\n", pthread_self());
-		cqueue_pop(cq);
-	}
-	spinlock_unlock(&lock);
+	
 	return NULL;
 }
 
 int main(int argc, char const *argv[]) {
 	size_t i;
 	lock = SL_UNLOCK;
-	cq = create_cqueue();
+	cq = cqueue_create();
 	count = 0;
 	cqueue_item *cqi;
 	for(i = 0; i < 6; i++)
@@ -56,10 +52,17 @@ int main(int argc, char const *argv[]) {
 	for(i = 0; i < NUMS; i++) {
 		pthread_create(&threads[i], NULL, cqueue_pop_mt, NULL);	
 	}
+	for(;;) {
+		spinlock_lock(&lock);
+		cqueue_push(cq, NULL);
+		fprintf(stdout, "%ld push %ld\n", pthread_self(), cqueue_len(cq));
+		spinlock_unlock(&lock);
+	}
 	for(i = 0; i < NUMS; i++) {
 		pthread_join(threads[i], &code);
 	}
-	destory_cqueue(cq);
+	
+	cqueue_destroy(cq);
 	printf("%ld\n", cqueue_len(cq));
 	printf("%lu\n", count);
 	return 0;

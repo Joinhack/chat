@@ -43,7 +43,7 @@ static server *create_server() {
 		return NULL;
 	}
 	//TODO: set size from config
-	svr->thr_pool = cthr_pool_create(20);
+	svr->thr_pool = cthr_pool_create(1);
 	if(svr->thr_pool == NULL) {
 		destroy_server(svr);
 		return NULL;
@@ -67,7 +67,7 @@ int mainLoop(server *svr) {
 			for(i = 0; i < ev_num; i++) {
 				//all threads is working.
 				if(cthr_pool_run_task(svr->thr_pool, process_event, svr->evts) == -1) {
-					return 0;
+					break;
 				}
 			}
 		}
