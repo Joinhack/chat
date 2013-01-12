@@ -18,7 +18,6 @@ void *thread_loop(void *data) {
 		}
 		pthread_mutex_lock(&pool->mutex);
 		thr->state = THR_IDLE;
-		cqueue_push(pool->idle_queue, (void*)thr);
 		if(pthread_cond_wait(&thr->cond, &pool->mutex) < 0) {
 			//TODO: log it.
 			fprintf(stderr, "wait error\n");
@@ -69,7 +68,6 @@ void cthr_pool_destroy(cthr_pool *pool) {
 		pthread_cond_destroy(&thr->cond);
 	}
 	pthread_mutex_destroy(&pool->mutex);
-	cqueue_destroy(pool->idle_queue);
 	jfree(pool->thrs);
 	jfree(pool);
 }
@@ -86,8 +84,7 @@ cthr_pool *cthr_pool_create(size_t size) {
 		jfree(pool);
 		return NULL;
 	}
-	pool->size = 0;
-	pool->idle_queue = cqueue_create();
+	pool->size = size;
 	pool->state = THRP_WORK;
 	for(i = 0; i <  size; i++) {
 		thr = pool->thrs + i;
@@ -95,23 +92,29 @@ cthr_pool *cthr_pool_create(size_t size) {
 			cthr_pool_destroy(pool);
 			return NULL;
 		}
-		pool->size++;
 	}
 	//wait for idle queue fill
-	while(cqueue_len(pool->idle_queue) != size);
+	for(i = 0; i < size; i++) {
+		thr = pool->thrs + i;
+		if(thr->state != THR_IDLE)
+			continue;
+	}
 	pool->state = THRP_WORK;
 	return pool;
 }
 
 //return -1, all thread is busy
 int cthr_pool_run_task(cthr_pool *pool, cthread_proc *proc, void *proc_data) {
-	cthread *thr;
+	cthread *thr = NULL;
+	int i;
 	pthread_mutex_lock(&pool->mutex);
-	thr = (cthread*)cqueue_pop(pool->idle_queue);
-	if(thr == NULL) {
-		pthread_mutex_unlock(&pool->mutex);
-		return -1;
+	for(i = 0; i < pool->size; i++) {
+		thr = pool->thrs + i;
+		if(thr->state == THR_IDLE)
+			break;
 	}
+	if(thr == NULL)
+		return -1;
 	thr->proc = proc;
 	thr->proc_data = proc_data;
 	pthread_cond_signal(&thr->cond);

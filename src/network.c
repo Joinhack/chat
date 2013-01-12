@@ -34,6 +34,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 static void cio_close_destroy(cevents *evts, cio *io) {
 	//del event
 	cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE);
+	printf("close -----------\n");
 	close(io->fd);
 	cio_destroy(io);
 }
@@ -42,6 +43,7 @@ static void cio_close_destroy(cevents *evts, cio *io) {
 int event_prev_proc(cevents *cevts, int fd, void *priv, int mask) {
 	//TODO: process the ret value.
 	int ret;
+	printf("pre proc\n");
 	ret = cevents_del_event(cevts, fd, CEV_READ|CEV_WRITE);
 	if(ret < 0) {
 		fprintf(stderr, "%s\n", strerror(errno));
@@ -108,7 +110,8 @@ void *process_event(void *priv) {
 	int ret;
 	cevents *cevts = (cevents*)priv;
 	cevent_fired *evt_fired, evt;
-	while((evt_fired = (cevent_fired*)cqueue_pop(cevts->fired_queue)) != NULL) {
+	while(1) {
+		evt_fired = (cevent_fired*)cevents_pop_fired(cevts);
 		if(evt_fired == NULL)
 			return NULL;
 		//copy it, and destroy it.

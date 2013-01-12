@@ -2,7 +2,6 @@
 #define CTHREAD_H
 
 #include <pthread.h>
-#include "cqueue.h"
 
 #define THR_INIT 0x0
 #define THR_IDLE 0x1
@@ -25,7 +24,6 @@ typedef struct {
 } cthread;
 
 typedef struct _thr_pool {
-	cqueue *idle_queue;
 	cthread *thrs;
 	pthread_mutex_t mutex;
 	volatile int state;

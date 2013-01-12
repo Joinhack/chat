@@ -43,7 +43,7 @@ static server *create_server() {
 		return NULL;
 	}
 	//TODO: set size from config
-	svr->thr_pool = cthr_pool_create(1);
+	svr->thr_pool = cthr_pool_create(10);
 	if(svr->thr_pool == NULL) {
 		destroy_server(svr);
 		return NULL;
