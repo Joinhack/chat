@@ -33,16 +33,16 @@ int master_preproc(cevents *cevts, cevent_fired *fired) {
 }
 
 void cevents_push_fired(cevents *cevts, cevent_fired *fired) {
-	spinlock_lock(&cevts->lock);
+	spinlock_lock(&cevts->qlock);
 	cqueue_push(cevts->fired_queue, (void*)fired);
-	spinlock_unlock(&cevts->lock);
+	spinlock_unlock(&cevts->qlock);
 }
 
 cevent_fired *cevents_pop_fired(cevents *cevts) {
 	cevent_fired *fevt;
-	spinlock_lock(&cevts->lock);
+	spinlock_lock(&cevts->qlock);
 	fevt = (cevent_fired*)cqueue_pop(cevts->fired_queue);
-	spinlock_unlock(&cevts->lock);
+	spinlock_unlock(&cevts->qlock);
 	return fevt;
 }
 
@@ -56,6 +56,7 @@ cevents *cevents_create() {
 	evts->fired = jmalloc(sizeof(cevent_fired) * MAX_EVENTS);
 	evts->fired_queue = cqueue_create();
 	evts->lock = SL_UNLOCK;
+	evts->qlock = SL_UNLOCK;
 	cevents_create_priv_impl(evts);
 	return evts;
 }
@@ -70,6 +71,7 @@ void cevents_destroy(cevents *cevts) {
 	if(cevts->fired_queue != NULL)
 		cqueue_destroy(cevts->fired_queue);
 	cevts->lock = SL_UNLOCK;
+	cevts->qlock = SL_UNLOCK;
 	cevts->events = NULL;
 	cevts->fired = NULL;
 	cevts->fired_queue = NULL;
