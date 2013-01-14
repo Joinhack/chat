@@ -54,8 +54,7 @@ static server *create_server() {
 }
 
 int server_init(server *svr) {
-	cevents_set_master_preproc(svr->evts, svr->in_fd, tcp_accept_event_proc);
-	cevents_add_event(svr->evts, svr->in_fd, CEV_READ, NULL, svr);
+	cevents_add_event(svr->evts, svr->in_fd, CEV_READ, tcp_accept_event_proc, svr);
 	return 0;
 }
 

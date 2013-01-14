@@ -16,11 +16,6 @@ typedef int event_proc(cevents *evts, int fd, void *priv, int mask);
 
 typedef struct {
 	int mask;
-	/*master thread process, if return 0 don't add to fired_queue.
-	 *if return 1, add event to fired queue. let backend thread process.
-	 *I wanna use master thread  for accpet and timeout operation.
-	 */
-	event_proc *master_preproc;
 	event_proc *read_proc;
 	event_proc *write_proc;
 	void *priv;
@@ -29,9 +24,6 @@ typedef struct {
 typedef struct {
 	int mask;
 	int fd;
-	event_proc *read_proc;
-	event_proc *write_proc;
-	void *priv;
 } cevent_fired;
 
 struct _cevents {
@@ -41,7 +33,6 @@ struct _cevents {
 	cqueue *fired_queue;
 	spinlock_t qlock;
 	char impl_name[64];
-	spinlock_t lock;
 	void *priv_data; //use for implement data.
 };
 

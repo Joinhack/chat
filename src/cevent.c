@@ -23,15 +23,6 @@ static int cevents_disable_event_impl(cevents *cevts, int fd, int mask);
 #include "cevent_select.c"
 #endif
 
-int master_preproc(cevents *cevts, cevent_fired *fired) {
-	int fd = fired->fd;
-	int mask = fired->mask;
-	cevent *evt = cevts->events + fd;
-	if(evt->master_preproc != NULL)
-			return evt->master_preproc(cevts, fd, evt->priv, mask);
-	return 0;
-}
-
 void cevents_push_fired(cevents *cevts, cevent_fired *fired) {
 	spinlock_lock(&cevts->qlock);
 	cqueue_push(cevts->fired_queue, (void*)fired);
@@ -55,7 +46,6 @@ cevents *cevents_create() {
 	evts->events = jmalloc(sizeof(cevent) * MAX_EVENTS);
 	evts->fired = jmalloc(sizeof(cevent_fired) * MAX_EVENTS);
 	evts->fired_queue = cqueue_create();
-	evts->lock = SL_UNLOCK;
 	evts->qlock = SL_UNLOCK;
 	cevents_create_priv_impl(evts);
 	return evts;
@@ -70,7 +60,6 @@ void cevents_destroy(cevents *cevts) {
 		jfree(cevts->fired);
 	if(cevts->fired_queue != NULL)
 		cqueue_destroy(cevts->fired_queue);
-	cevts->lock = SL_UNLOCK;
 	cevts->qlock = SL_UNLOCK;
 	cevts->events = NULL;
 	cevts->fired = NULL;
@@ -84,11 +73,9 @@ int cevents_add_event(cevents *cevts, int fd, int mask, event_proc *proc, void *
 	cevent *evt;
 	if(fd > MAX_EVENTS)
 		return J_ERR;
-	spinlock_lock(&cevts->lock);
 	evt = cevts->events + fd;
 	if((rs = cevents_add_event_impl(cevts, fd, mask)) < 0) {
 		fprintf(stderr, "add event error:%s\n", strerror(errno));
-		spinlock_unlock(&cevts->lock);
 		return rs;
 	}
 	if(mask & CEV_READ) evt->read_proc = proc;
@@ -97,7 +84,6 @@ int cevents_add_event(cevents *cevts, int fd, int mask, event_proc *proc, void *
 	if(fd > cevts->maxfd && evt->mask != CEV_NONE) 
 		cevts->maxfd = fd;
 	evt->priv = priv;
-	spinlock_unlock(&cevts->lock);
 	return J_OK;
 }
 
@@ -109,7 +95,6 @@ int cevents_del_event(cevents *cevts, int fd, int mask) {
 	//don't unbind the method, maybe should be used again.
 
 	if (evt->mask == CEV_NONE) return 0;
-	spinlock_lock(&cevts->lock);
 
 	//ignore error
 	if(cevents_del_event_impl(cevts, fd, mask) < 0) {
@@ -125,7 +110,6 @@ int cevents_del_event(cevents *cevts, int fd, int mask) {
 			}
 		}
 	}
-	spinlock_unlock(&cevts->lock);
 	return 0;
 }
 
@@ -134,23 +118,17 @@ int cevents_rebind_event(cevents *cevts, int fd, int mask) {
 	int rs;
 	if(mask & CEV_READ) {
 		if((rs = cevents_add_event(cevts, fd, CEV_READ, evt->read_proc, evt->priv)) < 0) {
-			fprintf(stderr, "add event error:%s\n", strerror(errno));
+			fprintf(stderr, "rebind add event error:%s\n", strerror(errno));
 			return rs;
 		}
 	}
 	if(mask & CEV_WRITE) {
 		if((rs = cevents_add_event(cevts, fd, CEV_WRITE, evt->write_proc, evt->priv)) < 0) {
-			fprintf(stderr, "add event error: %s\n", strerror(errno));
+			fprintf(stderr, "rebind add event error: %s\n", strerror(errno));
 			return rs;
 		}
 	}
 	return 0;
-}
-
-
-void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_preproc) {
-	cevent *evt = cevts->events + fd;
-	evt->master_preproc = master_preproc;
 }
 
 static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
@@ -158,9 +136,6 @@ static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
 	cevent_fired *new_cevent_fired = jmalloc(sizeof(cevent_fired));
 	new_cevent_fired->fd = fired->fd;
 	new_cevent_fired->mask = fired->mask;
-	new_cevent_fired->read_proc = cevent->read_proc;
-	new_cevent_fired->write_proc = cevent->write_proc;
-	new_cevent_fired->priv = cevent->priv;
 	return new_cevent_fired;
 }
 
@@ -168,20 +143,22 @@ static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
 int cevents_poll(cevents *cevts, msec_t ms) {
 	int ret, i, count = 0;
 	cevent_fired *fired;
+	cevent *evt;
 	if(cevts == NULL) {
 		fprintf(stderr, "can't be happend\n");
 		abort();
 	}
-	spinlock_lock(&cevts->lock);
 	ret = cevents_poll_impl(cevts, ms);
-	spinlock_unlock(&cevts->lock);
 	if(ret > 0) {
 		for(i = 0; i < ret; i++) {
 			fired = cevts->fired + i;
-			if(!master_preproc(cevts, fired)) {
-					continue;
+			evt = cevts->events + fired->fd;
+			if(fired->mask & CEV_READ) {
+				evt->read_proc(cevts, fired->fd, evt->priv, fired->mask);
 			}
-			cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
+			if(fired->mask & CEV_WRITE) {
+				evt->write_proc(cevts, fired->fd, evt->priv, fired->mask);
+			}
 			count++;
 		}
 	}
