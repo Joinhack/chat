@@ -52,8 +52,8 @@ int event_prev_proc(cevents *cevts, int fd, void *priv, int mask) {
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int ret;
 	cio *io = (cio*)priv;
-	while(io->nwrite != io->nread) {
-		if(io->nread > 0) {
+	if(io->nread > 0) {
+		while(io->nwrite != io->nread) {	
 			ret = write(fd, io->buff + io->nwrite, io->nread - io->nwrite);
 			if(ret < 0) {
 				//install write event
