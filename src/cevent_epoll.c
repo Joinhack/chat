@@ -28,7 +28,7 @@ static int cevents_add_event_impl(cevents *cevts, int fd, int mask) {
 	struct epoll_event ep_event;
 	memset(&ep_event, 0, sizeof(struct epoll_event));
 	epoll_priv *priv = (epoll_priv*)cevts->priv_data;
-	if(old_mask & CEV_READ || old_mask & CEV_WRITE)
+	if(old_mask != CEV_NONE)
 		operation = EPOLL_CTL_MOD;
 	//set old mask;
 	mask |= old_mask;
@@ -47,7 +47,7 @@ static int cevents_del_event_impl(cevents *cevts, int fd, int mask) {
 	old_mask &= ~mask;
 	if(old_mask & CEV_READ) ep_event.events |= EPOLLIN;
 	if(old_mask & CEV_WRITE) ep_event.events |= EPOLLOUT;
-	if(old_mask & CEV_READ || old_mask & CEV_WRITE)
+	if(old_mask != CEV_NONE)
 		operation = EPOLL_CTL_MOD;
 	ep_event.data.fd = fd;
 	return epoll_ctl(priv->epfd, operation, fd, &ep_event);
