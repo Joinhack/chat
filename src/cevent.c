@@ -153,6 +153,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 		for(i = 0; i < ret; i++) {
 			fired = cevts->fired + i;
 			evt = cevts->events + fired->fd;
+			printf("%d\n", fired->mask);
 			if(fired->mask & CEV_READ) {
 				evt->read_proc(cevts, fired->fd, evt->priv, fired->mask);
 			}

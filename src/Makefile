@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-DUSE_JEMALLOC -DUSE_SCHED_YIELD -g
+CFLAGS=-DUSE_JEMALLOC -std=c99
 OPTS = -lpthread -ljemalloc
 
 

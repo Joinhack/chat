@@ -1,6 +1,6 @@
 CC = gcc
 INC = ../src
-OPTS =
+OPTS = -std=c99
 
 TARGS=cstr_test cnet_test cthread_test jmalloc_test cqueue_test
 

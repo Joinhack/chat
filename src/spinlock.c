@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
-#include "spinlock.h"
 #include "cprocess.h"
+#include "spinlock.h"
 
 /*
  *if acquire lock return 1 else return 0

@@ -41,7 +41,7 @@ int main(int argc, char const *argv[]) {
 	cqueue_pop(cq);
 	cqueue_pop(cq);
 	for(i = 0; i < 1; i++) {
-		printf("%llu, %llu, %llu\n", (void*)cqi, (void*)cqi->next, (void*)cqi->prev);
+		printf("%p, %p, %p\n", (void*)cqi, (void*)cqi->next, (void*)cqi->prev);
 		cqi = cqi->next;
 	}
 	cqueue_pop(cq);
@@ -64,7 +64,7 @@ int main(int argc, char const *argv[]) {
 	
 	cqueue_destroy(cq);
 	printf("%ld\n", cqueue_len(cq));
-	printf("%lu\n", count);
+	printf("%u\n", count);
 	return 0;
 }
 

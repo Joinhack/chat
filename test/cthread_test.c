@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <spinlock.h>
+#include <cqueue.h>
 #include <cthread.h>
 
 

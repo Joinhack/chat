@@ -38,17 +38,6 @@ static void cio_close_destroy(cevents *evts, cio *io) {
 	cio_destroy(io);
 }
 
-//disable fire read event for this fd. let the backend thread read.
-int event_prev_proc(cevents *cevts, int fd, void *priv, int mask) {
-	//TODO: process the ret value.
-	int ret;
-	ret = cevents_del_event(cevts, fd, CEV_READ|CEV_WRITE);
-	if(ret < 0) {
-		fprintf(stderr, "%s\n", strerror(errno));
-	}
-	return 1;
-}
-
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int ret;
 	cio *io = (cio*)priv;
@@ -56,9 +45,9 @@ int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		while(io->nwrite != io->nread) {	
 			ret = write(fd, io->buff + io->nwrite, io->nread - io->nwrite);
 			if(ret < 0) {
-				//install write event
+				//continue;
 				if(errno == EAGAIN)
-					return cevents_rebind_event(cevts, fd, CEV_WRITE);
+					return 0;
 				cio_close_destroy(cevts, io);
 				return -1;
 			}
@@ -68,10 +57,9 @@ int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 				return 0;
 			}
 		}
+		cevents_del_event(cevts, fd, CEV_WRITE);
 	}
 	io->nread = 0;
-	cevents_del_event(cevts, fd, CEV_WRITE);
-	ret = cevents_rebind_event(cevts, fd, CEV_READ);
 	return 0;
 }
 
@@ -81,7 +69,6 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int ret, nread;
 
 	nread = read(fd, io->buff, cstr_len(io->buff));
-	printf("read %d\n", nread);
 	if(nread < 0) {
 		if(errno == EAGAIN) {
 			return cevents_rebind_event(cevts, fd, CEV_READ);
