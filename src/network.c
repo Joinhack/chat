@@ -71,7 +71,7 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	nread = read(fd, io->buff, cstr_len(io->buff));
 	if(nread < 0) {
 		if(errno == EAGAIN) {
-			return cevents_rebind_event(cevts, fd, CEV_READ);
+			return cevents_add_event(cevts, fd, CEV_READ, read_event_proc, io);
 		}
 		cio_close_destroy(cevts, io);
 		return -1;
@@ -104,6 +104,13 @@ void *process_event(void *priv) {
 		//copy it, and destroy it.
 		evt = *evt_fired;
 		jfree(evt_fired);
+
+		if(evt.mask & CEV_READ) {
+			evt.read_proc(cevts, evt.fd, evt.priv, evt.mask);
+		}
+		if(evt.mask & CEV_WRITE) {
+			evt.write_proc(cevts, evt.fd, evt.priv, evt.mask);
+		}
 	}
 	return NULL;
 }

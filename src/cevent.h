@@ -25,6 +25,9 @@ typedef struct {
 typedef struct {
 	int mask;
 	int fd;
+	event_proc *read_proc;
+	event_proc *write_proc;
+	void *priv;
 } cevent_fired;
 
 struct _cevents {
@@ -41,16 +44,18 @@ struct _cevents {
 };
 
 
-#define OP_ADD 0x1
-#define OP_DEL 0x1<<1
-#define OP_MASTER_PREPROC 0x1<<2
-
 typedef struct {
 	int mask;
 	event_proc *proc;
 	void *priv;
+	int fd;
 	int operation;
 } cevent_ops;
+
+
+#define OP_ADD 0x1
+#define OP_DEL 0x1<<1
+#define OP_MASTER_PREPROC 0x1<<2
 
 cevents *cevents_create();
 void cevents_destroy(cevents *cevts);

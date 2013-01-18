@@ -19,6 +19,9 @@ void cqueue_destroy(cqueue *cq);
 void *cqueue_pop(cqueue *cq);
 void cqueue_push(cqueue *cq, void *data);
 
+//return removed count.
+int cqueue_walk_remove(cqueue *cq, int (*cb)(void *, void *priv), void *priv);
+
 CINLINE size_t cqueue_len(cqueue *cq) {
 	return cq->count;
 }

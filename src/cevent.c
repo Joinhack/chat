@@ -3,8 +3,8 @@
 #include <string.h>
 #include <errno.h>
 #include "common.h"
-#include "cevent.h"
 #include "jmalloc.h"
+#include "cevent.h"
 #include "code.h"
 
 static int cevents_create_priv_impl(cevents *cevts);
@@ -24,7 +24,7 @@ static int cevents_disable_event_impl(cevents *cevts, int fd, int mask);
 #endif
 
 static cevent_ops *cevent_ops_create() {
-	cevent_ops *ops = jmalloc(cevent_ops);
+	cevent_ops *ops = jmalloc(sizeof(cevent_ops));
 	memset(ops, 0, sizeof(cevent_ops));
 	return ops;
 }
@@ -35,7 +35,7 @@ static void cevent_ops_destroy(cevent_ops *ops) {
 
 static void cevent_ops_queue_push(cevents *cevts, cevent_ops *ops) {
 	spinlock_lock(&cevts->oqlock);
-	cqueue_push(&cevts->event_ops_queue, ops);
+	cqueue_push(cevts->event_ops_queue, ops);
 	spinlock_unlock(&cevts->oqlock);
 }
 
@@ -47,7 +47,7 @@ void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_prepr
 	}
 	ops = cevent_ops_create();
 	ops->operation = OP_MASTER_PREPROC;
-	ops->master_preproc = master_preproc;
+	ops->proc = master_preproc;
 	cevent_ops_queue_push(cevts, ops);
 }
 
@@ -107,32 +107,34 @@ int cevents_add_event_inner(cevents *cevts, int fd, int mask, event_proc *proc, 
 	if(fd > MAX_EVENTS)
 		return J_ERR;
 	evt = cevts->events + fd;
-	if(spinlock_trylock(&cevts->lock)) {
-		if((rs = cevents_add_event_impl(cevts, fd, mask)) < 0) {
-			fprintf(stderr, "add event error:%s\n", strerror(errno));
-			spinlock_unlock(&cevts->lock);
-			return rs;
-		}
-		if(mask & CEV_READ) evt->read_proc = proc;
-		if(mask & CEV_WRITE) evt->write_proc = proc;
-		evt->mask |= mask;
-		if(fd > cevts->maxfd && evt->mask != CEV_NONE) 
-			cevts->maxfd = fd;
-		evt->priv = priv;
+	if((rs = cevents_add_event_impl(cevts, fd, mask)) < 0) {
+		fprintf(stderr, "add event error:%s\n", strerror(errno));
 		spinlock_unlock(&cevts->lock);
-		return 0;
+		return rs;
 	}
-	return -1;
+	if(mask & CEV_READ) evt->read_proc = proc;
+	if(mask & CEV_WRITE) evt->write_proc = proc;
+	evt->mask |= mask;
+	if(fd > cevts->maxfd && evt->mask != CEV_NONE) 
+		cevts->maxfd = fd;
+	evt->priv = priv;
+	spinlock_unlock(&cevts->lock);
+	return 0;
 }
 
 int cevents_add_event(cevents *cevts, int fd, int mask, event_proc *proc, void *priv) {
 	cevent_ops *ops;
-	if(cevents_add_event_inner(cevts, fd, mask, proc, priv) == -1)
-		return -1;
+	int rs;
+	if(spinlock_trylock(&cevts->lock)) {
+		rs = cevents_add_event_inner(cevts, fd, mask, proc, priv);
+		spinlock_unlock(&cevts->lock);
+		return rs;
+	}
 	ops = cevent_ops_create();
 	ops->operation = OP_ADD;
 	ops->mask = mask;
 	ops->proc = proc;
+	ops->fd = fd;
 	ops->priv = priv;
 	cevent_ops_queue_push(cevts, ops);
 	return 0;
@@ -146,36 +148,38 @@ int cevents_del_event_inner(cevents *cevts, int fd, int mask) {
 	//don't unbind the method, maybe should be used again.
 
 	if (evt->mask == CEV_NONE) return 0;
-	if(spinlock_trylock(&cevts->lock)) {
-		//ignore error
-		if(cevents_del_event_impl(cevts, fd, mask) < 0) {
-			fprintf(stderr, "del event error:%s\n", strerror(errno));
-		}
-		evt->mask &= ~mask; //remove mask
-		//change maxfd
-		if(cevts->maxfd == fd && evt->mask == CEV_NONE) {
-			for(j = cevts->maxfd - 1; j >= 0; j--) {
-				if(cevts->events[j].mask != CEV_NONE) {
-					cevts->maxfd = j;
-					break;
-				}
+	
+	//ignore error
+	if(cevents_del_event_impl(cevts, fd, mask) < 0) {
+		fprintf(stderr, "del event error:%s\n", strerror(errno));
+	}
+	evt->mask &= ~mask; //remove mask
+	//change maxfd
+	if(cevts->maxfd == fd && evt->mask == CEV_NONE) {
+		for(j = cevts->maxfd - 1; j >= 0; j--) {
+			if(cevts->events[j].mask != CEV_NONE) {
+				cevts->maxfd = j;
+				break;
 			}
 		}
-		spinlock_unlock(&cevts->lock);
-		return 0;	
 	}
-	return -1;
+	return 0;
 }
 
 int cevents_del_event(cevents *cevts, int fd, int mask) {
 	cevent_ops *ops;
-	if(cevents_del_event_inner(cevts, fd, mask) == -1)
-		return -1;
+	int rs;
+	if(spinlock_trylock(&cevts->lock)) {
+		rs = cevents_del_event_inner(cevts, fd, mask);
+		spinlock_unlock(&cevts->lock);
+		return rs;
+	}
 	ops = cevent_ops_create();
 	ops->operation = OP_DEL;
 	ops->mask = mask;
-	ops->proc = proc;
-	ops->priv = priv;
+	ops->proc = NULL;
+	ops->fd = fd;
+	ops->priv = NULL;
 	cevent_ops_queue_push(cevts, ops);
 	return 0;
 }
@@ -185,11 +189,31 @@ static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
 	cevent_fired *new_cevent_fired = jmalloc(sizeof(cevent_fired));
 	new_cevent_fired->fd = fired->fd;
 	new_cevent_fired->mask = fired->mask;
+	new_cevent_fired->read_proc = cevent->read_proc;
+	new_cevent_fired->write_proc = cevent->write_proc;
+	new_cevent_fired->priv = cevent->priv;
 	return new_cevent_fired;
 }
 
+static int merge_event_compare(void *data, void *priv) {
+	cevent_ops *ops = (cevent_ops *)data;
+	cevents *cevts = (cevents*)priv;
+	if(ops->operation & OP_DEL) {
+		return cevents_del_event_inner(cevts, ops->fd, ops->mask);
+	}
+	if(ops->operation & OP_ADD) {
+		return cevents_add_event_inner(cevts, ops->fd, ops->mask, ops->proc, ops->priv);
+	}
+
+	if(ops->operation & OP_MASTER_PREPROC) {
+		(cevts->events + ops->fd)->master_preproc = ops->proc;
+	}
+}
+
 void merge_event(cevents *cevts) {
-	
+	spinlock_lock(&cevts->oqlock);
+	cqueue_walk_remove(cevts->event_ops_queue, merge_event_compare, cevts);
+	spinlock_unlock(&cevts->oqlock);
 }
 
 //return push queue count or J_ERR
@@ -202,7 +226,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 		abort();
 	}
 	//merge event
-	merge_event();
+	merge_event(cevts);
 	spinlock_lock(&cevts->lock);
 	ret = cevents_poll_impl(cevts, ms);
 	spinlock_unlock(&cevts->lock);
@@ -210,13 +234,11 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 		for(i = 0; i < ret; i++) {
 			fired = cevts->fired + i;
 			evt = cevts->events + fired->fd;
-			printf("%d\n", fired->mask);
-			if(fired->mask & CEV_READ) {
-				evt->read_proc(cevts, fired->fd, evt->priv, fired->mask);
+			if(evt->master_preproc != NULL) {
+				if(evt->master_preproc(cevts, fired->fd, evt->priv, fired->mask))
+					continue;
 			}
-			if(fired->mask & CEV_WRITE) {
-				evt->write_proc(cevts, fired->fd, evt->priv, fired->mask);
-			}
+			cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
 			count++;
 		}
 	}

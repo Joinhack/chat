@@ -47,6 +47,33 @@ void *cqueue_pop(cqueue *cq) {
 	return data;
 }
 
+int cqueue_walk_remove(cqueue *cq, int (*cb)(void *, void *priv), void *priv) {
+	int count = 0;
+	cqueue_item *item, *next;
+	item = cq->head;
+	while(item != NULL) {
+		if(!cb(item->data, priv)) {
+			next = item->next;
+			if(--cq->count) {
+				item->prev->next = next;
+				next->prev = item->prev;
+			} else {
+				cq->head = NULL;
+			}
+			count++;
+			if(next == item) {
+				cqueue_item_destroy(item);
+				break;
+			}
+			cqueue_item_destroy(item);
+		} else {
+			next = item->next;
+		}
+		item = next;
+	}
+	return count;
+}
+
 void cqueue_push(cqueue *cq, void *data) {
 	cqueue_item *item, *hprev;
 	item = cqueue_item_create();

@@ -24,6 +24,10 @@ void *cqueue_pop_mt(void *data) {
 	return NULL;
 }
 
+int compare(void *data, void *priv) {
+	return 1;
+}
+
 int main(int argc, char const *argv[]) {
 	size_t i;
 	lock = SL_UNLOCK;
@@ -40,31 +44,12 @@ int main(int argc, char const *argv[]) {
 	cqueue_pop(cq);
 	cqueue_pop(cq);
 	cqueue_pop(cq);
-	for(i = 0; i < 1; i++) {
-		printf("%p, %p, %p\n", (void*)cqi, (void*)cqi->next, (void*)cqi->prev);
-		cqi = cqi->next;
-	}
-	cqueue_pop(cq);
-	printf("%ld\n", cqueue_len(cq));
-	pthread_t threads[NUMS];
-	void *code;
-	fprintf(stderr, "push finish\n");
-	for(i = 0; i < NUMS; i++) {
-		pthread_create(&threads[i], NULL, cqueue_pop_mt, NULL);	
-	}
-	for(;;) {
-		spinlock_lock(&lock);
+
+	for(i = 0; i < 6; i++)
 		cqueue_push(cq, NULL);
-		fprintf(stdout, "%ld push %ld\n", pthread_self(), cqueue_len(cq));
-		spinlock_unlock(&lock);
-	}
-	for(i = 0; i < NUMS; i++) {
-		pthread_join(threads[i], &code);
-	}
-	
+	cqueue_walk_remove(cq, compare, NULL);
+	printf("%d\n", cqueue_len(cq));
 	cqueue_destroy(cq);
-	printf("%ld\n", cqueue_len(cq));
-	printf("%u\n", count);
 	return 0;
 }
 
