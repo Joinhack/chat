@@ -208,6 +208,7 @@ static int merge_event_compare(void *data, void *priv) {
 	if(ops->operation & OP_MASTER_PREPROC) {
 		(cevts->events + ops->fd)->master_preproc = ops->proc;
 	}
+	return 0;
 }
 
 void merge_event(cevents *cevts) {
