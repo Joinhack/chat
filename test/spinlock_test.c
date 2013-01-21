@@ -31,6 +31,7 @@ void *spinlock_test(void *d) {
 int main(int argc, char const *argv[]) {
 	uint64_t p = 100;
 	uint32_t p32 = 100;
+	spinlock_t lock = SL_UNLOCK;
 	
 	int r;
 	atomic_add_uint64(&p, 2);
@@ -42,6 +43,8 @@ int main(int argc, char const *argv[]) {
 	atomic_sub_uint32(&p32, 1);
 	r = atomic_cmp_set_uint32(&p32, 101, 2);
 	printf("%d %d\n",r, p32);
+
+	printf("%d \n", spinlock_trylock(&lock));
 	
 	size_t i;
 	void *code;

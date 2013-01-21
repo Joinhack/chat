@@ -44,6 +44,7 @@ void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_prepr
 	if(spinlock_trylock(&cevts->lock)) {
 		(cevts->events + fd)->master_preproc = master_preproc;
 		spinlock_unlock(&cevts->lock);
+		return;
 	}
 	ops = cevent_ops_create();
 	ops->operation = OP_MASTER_PREPROC;
@@ -219,7 +220,7 @@ void merge_event(cevents *cevts) {
 
 //return push queue count or J_ERR
 int cevents_poll(cevents *cevts, msec_t ms) {
-	int ret, i, count = 0;
+	int rs, i, count = 0;
 	cevent_fired *fired;
 	cevent *evt;
 	if(cevts == NULL) {
@@ -229,10 +230,10 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 	//merge event
 	merge_event(cevts);
 	spinlock_lock(&cevts->lock);
-	ret = cevents_poll_impl(cevts, ms);
+	rs = cevents_poll_impl(cevts, ms);
 	spinlock_unlock(&cevts->lock);
-	if(ret > 0) {
-		for(i = 0; i < ret; i++) {
+	if(rs > 0) {
+		for(i = 0; i < rs; i++) {
 			fired = cevts->fired + i;
 			evt = cevts->events + fired->fd;
 			if(evt->master_preproc != NULL) {

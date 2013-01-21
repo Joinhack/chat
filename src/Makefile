@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=-DUSE_JEMALLOC -std=c99
-OPTS = -lpthread -ljemalloc
+CFLAGS= -std=c99
+OPTS = -lpthread 
 
 
 .c.o:

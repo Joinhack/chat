@@ -28,7 +28,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->fd = clifd;
 	io->type = IO_TCP;
 	cio_install_read_events(cevts, io);
-	return 0;
+	return 1;
 }
 
 static void cio_close_destroy(cevents *evts, cio *io) {
@@ -59,6 +59,7 @@ int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		}
 		cevents_del_event(cevts, fd, CEV_WRITE);
 	}
+	cevents_add_event(cevts, fd, CEV_READ, read_event_proc, io);
 	io->nread = 0;
 	return 0;
 }
@@ -86,11 +87,16 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	return 0;
 }
 
+static int cio_preproc(cevents *cevts, int fd, void *priv, int mask) {
+	return cevents_del_event(cevts, fd, CEV_READ|CEV_WRITE);
+}
+
 static int cio_install_read_events(cevents *cevts, cio *io) {
 	//TODO: process the ret value.
-	int ret;
-	ret = cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
-	return ret;
+	int rs;
+	cevents_set_master_preproc(cevts, io->fd, cio_preproc);
+	rs = cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+	return rs;
 }
 
 void *process_event(void *priv) {
