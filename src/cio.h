@@ -10,9 +10,8 @@
 typedef struct {
 	int fd;
 	int type;
-	int nread;
-	int nwrite;
-	cstr buff;
+	cstr readbuf;
+	cstr writebuf;
 } cio;
 
 int cio_set_noblock(int fd);

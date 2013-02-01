@@ -4,7 +4,11 @@
 
 int main(int argc, char const *argv[]) {
 	cstr s = cstr_create(1024);
-	printf("%ld \n", cstr_len(s));
+	cstr_ncat(s, "asasasas", 8);
+	printf("%u %u \n", cstr_len(s), cstr_used(s));
+	cstr_ncat(s, "asasasas", 8);
+	printf("%s\n", s);
+	printf("%u %u \n", cstr_len(s), cstr_used(s));
 	cstr_destroy(s);
 	return 0;
 }
