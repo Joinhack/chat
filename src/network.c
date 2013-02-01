@@ -42,7 +42,7 @@ int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int ret;
 	cio *io = (cio*)priv;
 	if(io->nread > 0) {
-		while(io->nwrite != io->nread) {	
+		while(io->nwrite != 0) {	
 			ret = write(fd, io->buff + io->nwrite, io->nread - io->nwrite);
 			if(ret < 0) {
 				//continue;
@@ -64,12 +64,16 @@ int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	return 0;
 }
 
+int process_commond(cio) {
+
+}
+
 //just for test.
 int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
 	int ret, nread;
-
-	nread = read(fd, io->buff, cstr_len(io->buff));
+	char buff[2048];
+	nread = read(fd, buff, sizeof(buff));
 	if(nread < 0) {
 		if(errno == EAGAIN) {
 			return cevents_add_event(cevts, fd, CEV_READ, read_event_proc, io);
@@ -81,9 +85,11 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		cio_close_destroy(cevts, io);
 		return 0;
 	}
-	io->nread += nread;
-	io->nwrite = 0;
-	cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
+	cstr_ncat(io->readbuf, buff, nread);
+	if(process_commond(io) != 0) {
+		fprintf(stderr, "error process command\n");
+		return -1;
+	}
 	return 0;
 }
 
