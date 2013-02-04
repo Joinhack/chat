@@ -55,7 +55,7 @@ cstr* cstr_split(char *s, size_t len, char *b, size_t slen, size_t *l) {
 	cstr *array = NULL;
 	size_t i, j, cap = 0, size = 0, beg = 0;
 	for(i = 0; i < len - slen; i++) {
-		if(size <= cap) {
+		if(size < cap + 1) {
 			cap += 5;
 			array = jrealloc(array, cap);
 		}
@@ -65,6 +65,7 @@ cstr* cstr_split(char *s, size_t len, char *b, size_t slen, size_t *l) {
 			size++;
 		}
 	}
+	array[size++] = cstr_new(s + beg, len - beg);
 	*l = size;
 	return array;
 }
