@@ -45,11 +45,20 @@ int cio_read(int fd, char *ptr, size_t len) {
 cio *cio_create() {
 	cio *io = jmalloc(sizeof(cio));
 	memset(io, 0, sizeof(cio));
-	io->buff = cstr_create(1024);
+	io->rbuf = cstr_create(1024);
+	io->wbuf = cstr_create(1024);
+	io->wcount = 0;
 	return io;
 }
 
 void cio_destroy(cio *io) {
-	cstr_destroy(io->buff);
+	cstr_destroy(io->rbuf);
+	cstr_destroy(io->wbuf);
 	jfree(io);
+}
+
+void cio_clear(cio *io) {
+	cstr_clear(io->rbuf);
+	cstr_clear(io->wbuf);
+	io->wcount = 0;
 }

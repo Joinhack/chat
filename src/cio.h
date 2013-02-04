@@ -10,8 +10,9 @@
 typedef struct {
 	int fd;
 	int type;
-	cstr readbuf;
-	cstr writebuf;
+	cstr rbuf;
+	cstr wbuf;
+	int wcount;
 } cio;
 
 int cio_set_noblock(int fd);
@@ -25,5 +26,7 @@ int cio_read(int fd, char *ptr, size_t len);
 cio *cio_create();
 
 void cio_destroy(cio *io);
+
+void cio_clear(cio *io);
 
 #endif /*end define common io**/
