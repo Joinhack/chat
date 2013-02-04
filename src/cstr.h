@@ -6,8 +6,10 @@
 #define cstr char *
 
 cstr cstr_create(size_t len);
+cstr cstr_new(char *c, size_t len);
 void cstr_destroy(cstr s);
 cstr cstr_ncat(cstr s, char *b, size_t l);
+cstr* cstr_split(char *s, size_t len, char *b, size_t slen, size_t *l);
 void cstr_clear(cstr s);
 
 typedef struct {

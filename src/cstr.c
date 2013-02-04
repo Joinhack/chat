@@ -14,6 +14,15 @@ cstr cstr_create(size_t len) {
 	return (cstr)csh->buff;
 }
 
+cstr cstr_new(char *c, size_t len) {
+	cstr s = cstr_create(len + 1);
+	cstrhdr *csh = (cstrhdr*)s;
+	memcpy(s, c, len);
+	s[len] = '\0';
+	csh->free = 0;
+	return s;
+}
+
 void cstr_destroy(cstr s) {
 	char *ptr = CSTR_REALPTR(s);
 	jfree(ptr);
@@ -42,6 +51,20 @@ void cstr_clear(cstr s) {
 	csh->buff[0] = '\0';
 }
 
-cstr* cstr_split(cstr s, char *b, size_t *l) {
-	
+cstr* cstr_split(char *s, size_t len, char *b, size_t slen, size_t *l) {
+	cstr *array = NULL;
+	size_t i, j, cap = 0, size = 0, beg = 0;
+	for(i = 0; i < len - slen; i++) {
+		if(size <= cap) {
+			cap += 5;
+			array = jrealloc(array, cap);
+		}
+		if(s[i] == b[0] && memcmp(s + i, b, slen) == 0) {
+			array[size] = cstr_new(s + beg, i - beg);
+			beg = i + slen; 
+			size++;
+		}
+	}
+	*l = size;
+	return array;
 }
