@@ -110,7 +110,6 @@ int cevents_add_event_inner(cevents *cevts, int fd, int mask, event_proc *proc, 
 	evt = cevts->events + fd;
 	if((rs = cevents_add_event_impl(cevts, fd, mask)) < 0) {
 		fprintf(stderr, "add event error:%s\n", strerror(errno));
-		spinlock_unlock(&cevts->lock);
 		return rs;
 	}
 	if(mask & CEV_READ) evt->read_proc = proc;
@@ -119,7 +118,6 @@ int cevents_add_event_inner(cevents *cevts, int fd, int mask, event_proc *proc, 
 	if(fd > cevts->maxfd && evt->mask != CEV_NONE) 
 		cevts->maxfd = fd;
 	evt->priv = priv;
-	spinlock_unlock(&cevts->lock);
 	return 0;
 }
 
