@@ -35,27 +35,11 @@ struct _cevents {
 	cevent *events; //should be MAX_EVENTS
 	cevent_fired *fired; //should be MAX_EVENTS, push to top level
 	cqueue *fired_queue;
-	cqueue *event_ops_queue;
-	spinlock_t oqlock;
 	spinlock_t qlock;
 	spinlock_t lock;
 	char impl_name[64];
 	void *priv_data; //use for implement data.
 };
-
-
-typedef struct {
-	int mask;
-	event_proc *proc;
-	void *priv;
-	int fd;
-	int operation;
-} cevent_ops;
-
-
-#define OP_ADD 0x1
-#define OP_DEL 0x1<<1
-#define OP_MASTER_PREPROC 0x1<<2
 
 cevents *cevents_create();
 void cevents_destroy(cevents *cevts);
