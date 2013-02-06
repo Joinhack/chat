@@ -21,7 +21,7 @@ typedef struct {
 int create_tcp_server() {
 	int fd;
 	char buff[1024];
-	fd = cnet_tcp_server("0.0.0.0", 8088, buff, sizeof(buff));
+	fd = cnet_tcp_server("0.0.0.0", 8081, buff, sizeof(buff));
 	if(fd < 0) {
 		fprintf(stderr, "%s\n", buff);
 		return -1;
