@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "cqueue.h"
-#include "spinlock.h"
+#include "lock.h"
 
 #define MAX_EVENTS (10240*20)
 #define CEV_NONE 0x0
@@ -35,8 +35,8 @@ struct _cevents {
 	cevent *events; //should be MAX_EVENTS
 	cevent_fired *fired; //should be MAX_EVENTS, push to top level
 	cqueue *fired_queue;
-	spinlock_t qlock;
-	spinlock_t lock;
+	LOCK_T qlock;
+	LOCK_T lock;
 	char impl_name[64];
 	void *priv_data; //use for implement data.
 };

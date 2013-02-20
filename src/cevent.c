@@ -25,22 +25,22 @@ static int cevents_disable_event_impl(cevents *cevts, int fd, int mask);
 
 
 void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_preproc) {
-	spinlock_lock(&cevts->lock);
+	LOCK(&cevts->lock);
 	(cevts->events + fd)->master_preproc = master_preproc;
-	spinlock_unlock(&cevts->lock);
+	UNLOCK(&cevts->lock);
 }
 
 void cevents_push_fired(cevents *cevts, cevent_fired *fired) {
-	spinlock_lock(&cevts->qlock);
+	LOCK(&cevts->qlock);
 	cqueue_push(cevts->fired_queue, (void*)fired);
-	spinlock_unlock(&cevts->qlock);
+	UNLOCK(&cevts->qlock);
 }
 
 cevent_fired *cevents_pop_fired(cevents *cevts) {
 	cevent_fired *fevt;
-	spinlock_lock(&cevts->qlock);
+	LOCK(&cevts->qlock);
 	fevt = (cevent_fired*)cqueue_pop(cevts->fired_queue);
-	spinlock_unlock(&cevts->qlock);
+	UNLOCK(&cevts->qlock);
 	return fevt;
 }
 
@@ -53,8 +53,8 @@ cevents *cevents_create() {
 	evts->events = jmalloc(sizeof(cevent) * MAX_EVENTS);
 	evts->fired = jmalloc(sizeof(cevent_fired) * MAX_EVENTS);
 	evts->fired_queue = cqueue_create();
-	evts->qlock = SL_UNLOCK;
-	evts->lock = SL_UNLOCK;
+	LOCK_INIT(&evts->qlock);
+	LOCK_INIT(&evts->lock);
 	cevents_create_priv_impl(evts);
 	return evts;
 }
@@ -68,7 +68,8 @@ void cevents_destroy(cevents *cevts) {
 		jfree(cevts->fired);
 	if(cevts->fired_queue != NULL)
 		cqueue_destroy(cevts->fired_queue);
-	cevts->qlock = SL_UNLOCK;
+	LOCK_DESTROY(&cevts->lock);
+	LOCK_DESTROY(&cevts->qlock);
 	cevts->events = NULL;
 	cevts->fired = NULL;
 	cevts->fired_queue = NULL;
@@ -97,9 +98,9 @@ int cevents_add_event_inner(cevents *cevts, int fd, int mask, event_proc *proc, 
 
 int cevents_add_event(cevents *cevts, int fd, int mask, event_proc *proc, void *priv) {
 	int rs;
-	spinlock_lock(&cevts->lock);
+	LOCK(&cevts->lock);
 	rs = cevents_add_event_inner(cevts, fd, mask, proc, priv);
-	spinlock_unlock(&cevts->lock);
+	UNLOCK(&cevts->lock);
 	return rs;
 }
 
@@ -131,9 +132,9 @@ int cevents_del_event_inner(cevents *cevts, int fd, int mask) {
 
 int cevents_del_event(cevents *cevts, int fd, int mask) {
 	int rs;
-	spinlock_lock(&cevts->lock);
+	LOCK(&cevts->lock);
 	rs = cevents_del_event_inner(cevts, fd, mask);
-	spinlock_unlock(&cevts->lock);
+	UNLOCK(&cevts->lock);
 	return rs;
 }
 
@@ -157,9 +158,9 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 		fprintf(stderr, "can't be happend\n");
 		abort();
 	}
-	spinlock_lock(&cevts->lock);
+	LOCK(&cevts->lock);
 	rs = cevents_poll_impl(cevts, ms);
-	spinlock_unlock(&cevts->lock);
+	UNLOCK(&cevts->lock);
 	if(rs > 0) {
 		for(i = 0; i < rs; i++) {
 			fired = cevts->fired + i;
