@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include "common.h"
+#include "log.h"
 #include "jmalloc.h"
 #include "cevent.h"
 #include "code.h"
@@ -84,7 +85,7 @@ int cevents_add_event_inner(cevents *cevts, int fd, int mask, event_proc *proc, 
 		return J_ERR;
 	evt = cevts->events + fd;
 	if((rs = cevents_add_event_impl(cevts, fd, mask)) < 0) {
-		fprintf(stderr, "add event error:%s\n", strerror(errno));
+		ERROR("add event error:%s\n", strerror(errno));
 		return rs;
 	}
 	if(mask & CEV_READ) evt->read_proc = proc;
@@ -115,7 +116,7 @@ int cevents_del_event_inner(cevents *cevts, int fd, int mask) {
 	
 	//ignore error
 	if(cevents_del_event_impl(cevts, fd, mask) < 0) {
-		fprintf(stderr, "del event error:%s\n", strerror(errno));
+		ERROR("del event error:%s\n", strerror(errno));
 	}
 	evt->mask &= ~mask; //remove mask
 	//change maxfd
@@ -155,7 +156,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 	cevent_fired *fired;
 	cevent *evt;
 	if(cevts == NULL) {
-		fprintf(stderr, "can't be happend\n");
+		ERROR("can't be happend\n");
 		abort();
 	}
 	LOCK(&cevts->lock);

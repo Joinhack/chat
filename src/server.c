@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
- #include <unistd.h>
+#include <unistd.h>
+#include "log.h"
 #include "jmalloc.h"
 #include "code.h"
 #include "cevent.h"
@@ -13,17 +14,17 @@
 typedef struct {
 	int in_fd;
 	int un_fd;
+	int logfd;
 	cevents *evts;
 	cthr_pool *thr_pool;
 } server;
-
 
 int create_tcp_server() {
 	int fd;
 	char buff[1024];
 	fd = cnet_tcp_server("0.0.0.0", 8081, buff, sizeof(buff));
 	if(fd < 0) {
-		fprintf(stderr, "%s\n", buff);
+		ERROR("%s\n", buff);
 		return -1;
 	}
 	cio_set_noblock(fd);
@@ -42,6 +43,8 @@ static server *create_server() {
 		destroy_server(svr);
 		return NULL;
 	}
+	svr->logfd = fileno(stdout);
+
 	//TODO: set size from config
 	svr->thr_pool = cthr_pool_create(10);
 	if(svr->thr_pool == NULL) {
@@ -49,7 +52,7 @@ static server *create_server() {
 		return NULL;
 	}
 	svr->evts = cevents_create();
-	fprintf(stdout, "use %s\n", svr->evts->impl_name);
+	INFO("use %s\n", svr->evts->impl_name);
 	return svr;
 }
 
@@ -80,6 +83,7 @@ int main(int argc, char const *argv[]) {
 	server *svr;
 	svr = create_server();
 	server_init(svr);
+	INFO("server started.\n");	
 	mainLoop(svr);
 	return 0;
 }

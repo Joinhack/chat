@@ -48,7 +48,7 @@ int reply_str(cevents *cevts, cio *io, char *buff) {
 
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
-	_reply(cevts, io);
+	return _reply(cevts, io);
 }
 
 int _reply(cevents *cevts, cio *io) {
@@ -82,7 +82,7 @@ int process_commond(cevents *cevts, cio *io) {
 		reply_str(cevts, io, "-ERR unknown command\r\n");
 		return cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 	}
-	reply_str(cevts, io, "+pong\r\n");
+	return reply_str(cevts, io, "+pong\r\n");
 }
 
 //just for test.
