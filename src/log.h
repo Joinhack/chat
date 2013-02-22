@@ -7,6 +7,8 @@ enum LOG_LEVEL {
 	LEVEL_ERR
 };
 
+void log_init(int fd);
+
 void clog(int level, const char *fmt, ...);
 
 #define ERROR(fmt, ...) clog(LEVEL_ERR, fmt, ##__VA_ARGS__)
