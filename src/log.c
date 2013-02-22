@@ -14,8 +14,14 @@ static char* level_array[] = {
 
 static int logfd;
 
-void set_logfd(int fd) {
+//define use mutex for log lock.
+#define USE_MUTEX
+static LOCK_T lock;
+
+
+void log_init(int fd) {
 	logfd = fd;
+	LOCK_INIT(&lock);
 }
 
 static void now(char *buf, size_t len) {
@@ -46,6 +52,8 @@ void clog(int level, const char *fmt, ...) {
 	va_start(arg_list, fmt);
 	log_fmt(buf, sizeof(buf), level, fmt, arg_list);
 	va_end(arg_list);
+	LOCK(&lock);
 	cio_write(logfd, buf, sizeof(buf));
+	LOCK(&lock);
 }
 

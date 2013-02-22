@@ -43,7 +43,8 @@ static server *create_server() {
 		destroy_server(svr);
 		return NULL;
 	}
-	svr->logfd = fileno(stdout);
+	svr->logfd = fileno(stderr);
+	log_init(svr->logfd);
 
 	//TODO: set size from config
 	svr->thr_pool = cthr_pool_create(10);
