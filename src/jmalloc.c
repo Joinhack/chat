@@ -102,6 +102,7 @@ uint64_t total_mem() {
 	int fd, c;
 	uint64_t size;
 	char val;
+	int page;
 	memset(path, 0, sizeof(path));
 	memset(data, 0, sizeof(data));
 	snprintf(path, sizeof(path), "/proc/%d/stat", getpid());
@@ -113,19 +114,22 @@ uint64_t total_mem() {
 		close(fd);
 		return 0;
 	}
+	close(fd);
 	//the 24th colum is the size
 	c = 23;
 	ptr = data;
 	while(ptr && c--) {
 		ptr = strchr(ptr, ' ');
-		ptr++;
+		if(ptr)
+			ptr++;
 	}
 	if(!ptr)
 		return 0;
 	end = strchr(ptr, ' ');
 	end[0] = 0x0;
-	size = strtoll(ptr, NULL, end - ptr);
-	return size;
+	page = sysconf(_SC_PAGESIZE);
+	size = strtoll(ptr, NULL, 10);
+	return size * page;
 }
 #elif defined(USE_TASKINFO)
 #include <unistd.h>
