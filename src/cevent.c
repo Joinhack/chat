@@ -56,6 +56,8 @@ cevents *cevents_create() {
 	LOCK_INIT(&evts->qlock);
 	LOCK_INIT(&evts->lock);
 	cevents_create_priv_impl(evts);
+	evts->poll_sec = 0;
+	evts->poll_ms = 0;
 	return evts;
 }
 
