@@ -55,6 +55,7 @@ static server *create_server() {
 		return NULL;
 	}
 	svr->evts = cevents_create();
+	INFO("server used %s for event\n", svr->evts->impl_name);
 	svr->last_info_time = 0;
 	return svr;
 }

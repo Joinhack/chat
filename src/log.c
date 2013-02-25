@@ -8,6 +8,7 @@
 
 static const char* level_array[] = {
 	"INFO",
+	"DEBUG",
 	"WARN",
 	"ERR"
 };
@@ -15,9 +16,7 @@ static const char* level_array[] = {
 static int logfd;
 
 //define use mutex for log lock.
-#define USE_MUTEX
 static LOCK_T lock;
-
 
 void log_init(int fd) {
 	logfd = fd;

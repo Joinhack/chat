@@ -11,7 +11,7 @@ typedef pthread_mutex_t cmutex_t;
 
 #define cmutex_unlock(m) pthread_mutex_unlock(m)
 
-#define cmutex_destroy(m) pthread_mutex_init(m)
+#define cmutex_destroy(m) pthread_mutex_destroy(m)
 
 #ifdef USE_MUTEX
 #define LOCK_T cmutex_t
@@ -24,8 +24,8 @@ typedef pthread_mutex_t cmutex_t;
 #define LOCK_T spinlock_t
 #define LOCK_INIT(l) (*l)=SL_UNLOCK
 #define LOCK_DESTROY(l) (*l)=SL_UNLOCK
-#define LOCK(l) spinlock_lock(l)
-#define UNLOCK(l) spinlock_unlock(l)
+#define LOCK(l) spinlock_lock(l);
+#define UNLOCK(l) spinlock_unlock(l);
 #endif
 
 

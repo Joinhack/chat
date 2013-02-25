@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -176,5 +177,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 			count++;
 		}
 	}
+	//must sleep, let other thread grant the lock. maybe removed when the time event added.
+	usleep(1);
 	return count;
 }

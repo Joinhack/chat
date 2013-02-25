@@ -7,6 +7,7 @@
 #include "cnet.h"
 #include "cio.h"
 #include "network.h"
+#include "log.h"
 
 static int cio_install_read_events(cevents *cevts, cio *io);
 
@@ -22,7 +23,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	memset(buff, 0, sizeof(buff));
 	memset(ip, 0, sizeof(ip));
 	if((clifd = cnet_tcp_accept(fd, ip, &port, buff, sizeof(buff))) < 0) {
-		fprintf(stderr, "%s\n", buff);
+		ERROR("%s\n", buff);
 		return -1;
 	}
 	//TODO: maybe there add cio queue.
@@ -34,6 +35,8 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 }
 
 static void cio_close_destroy(cevents *evts, cio *io) {
+	//cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE);
+	DEBUG("client closed\n");
 	close(io->fd);
 	cio_destroy(io);
 }
@@ -56,6 +59,7 @@ int _reply(cevents *cevts, cio *io) {
 		if(nwrite < 0) {
 			//continue;
 			if(errno == EAGAIN) {
+				DEBUG("rebind write event\n");
 				cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
 				return 0;
 			}
@@ -90,7 +94,7 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	char buff[2048];
 	nread = read(fd, buff, sizeof(buff));
 	if(nread < 0) {
-		if(errno == EAGAIN) {
+		if(errno == EAGAIN) {	
 			return cevents_add_event(cevts, fd, CEV_READ, read_event_proc, io);
 		}
 		cio_close_destroy(cevts, io);
@@ -102,7 +106,7 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	}
 	cstr_ncat(io->rbuf, buff, nread);
 	if(process_commond(cevts, io) != 0) {
-		fprintf(stderr, "error process command\n");
+		ERROR("error process command\n");
 		return -1;
 	}
 	return 0;
