@@ -55,10 +55,10 @@ int _reply(cevents *cevts, cio *io) {
 		nwrite = write(io->fd, io->wbuf + io->wcount, cstr_used(io->wbuf) - io->wcount);
 		if(nwrite < 0) {
 			//continue;
-			// if(errno == EAGAIN) {
-			// 	cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
-			// 	return 0;
-			// }
+			if(errno == EAGAIN) {
+				cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
+				return 0;
+			}
 			cio_close_destroy(cevts, io);
 			return -1;
 		}
