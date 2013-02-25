@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "common.h"
 #include "atomic.h"
 #include "jmalloc.h"
 
@@ -22,7 +23,6 @@
 #define MEM_PREFIX_SIZE 4
 #define mem_size(ptr) *((uint32_t*)ptr - MEM_PREFIX_SIZE)
 #endif
-
 
 
 #define update_used_mem(size) atomic_add_uint64(&_used_mem, size)
@@ -91,6 +91,68 @@ void jfree(void* ptr) {
 uint64_t used_mem() {
 	return _used_mem;
 }
+
+#if defined(USE_PROCFILE)
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
+uint64_t total_mem() {
+	char path[1024], data[4096], *ptr, *end;
+	int fd, c;
+	uint64_t size;
+	char val;
+	memset(path, 0, sizeof(path));
+	memset(data, 0, sizeof(data));
+	snprintf(path, sizeof(path), "/proc/%d/stat", getpid());
+	if((fd = open(path, O_RDONLY)) < 0) {
+		fprintf(stderr, "error open stat\n");
+		return 0;
+	}
+	if(read(fd, data, sizeof(data)) < 0) {
+		close(fd);
+		return 0;
+	}
+	//the 24th colum is the size
+	c = 23;
+	ptr = data;
+	while(ptr && c--) {
+		ptr = strchr(ptr, ' ');
+		ptr++;
+	}
+	if(!ptr)
+		return 0;
+	end = strchr(ptr, ' ');
+	end[0] = 0x0;
+	size = strtoll(ptr, NULL, end - ptr);
+	return size;
+}
+#elif defined(USE_TASKINFO)
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <mach/task.h>
+#include <mach/mach_init.h>
+
+uint64_t total_mem() {
+	task_t task = MACH_PORT_NULL;
+	struct task_basic_info t_info;
+	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
+
+	if (task_for_pid(current_task(), getpid(), &task) != KERN_SUCCESS)
+		return 0;
+	task_info(task, TASK_BASIC_INFO, (task_info_t)&t_info, &t_info_count);
+
+	return t_info.resident_size;
+}
+#else
+uint64_t total_mem() {
+	return _used_mem;
+}
+#endif
+
 
 
 

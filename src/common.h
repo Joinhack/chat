@@ -11,10 +11,12 @@ typedef uint64_t msec_t;
 
 #ifdef __linux__
 #define USE_EPOLL
+#define USE_PROCFILE
 #endif
 
 #if (defined(__APPLE__)) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined (__NetBSD__)
 #define USE_KQUEUE
+#define USE_TASKINFO
 #endif
 
 void time_now(long *s, int *ms);
