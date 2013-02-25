@@ -34,8 +34,6 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 }
 
 static void cio_close_destroy(cevents *evts, cio *io) {
-	//del event
-	cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE);
 	close(io->fd);
 	cio_destroy(io);
 }

@@ -37,6 +37,8 @@ struct _cevents {
 	cqueue *fired_queue;
 	LOCK_T qlock;
 	LOCK_T lock;
+	long poll_sec;
+	int poll_ms;
 	char impl_name[64];
 	void *priv_data; //use for implement data.
 };

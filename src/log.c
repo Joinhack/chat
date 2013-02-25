@@ -6,7 +6,7 @@
 #include "lock.h"
 #include "cio.h"
 
-static char* level_array[] = {
+static const char* level_array[] = {
 	"INFO",
 	"WARN",
 	"ERR"
@@ -45,7 +45,7 @@ static void log_fmt(char *buf, size_t len, int level, const char *fmt, va_list a
 	vsnprintf(buf, len, inner_fmt, arg_list);
 }
 
-void clog(int level, const char *fmt, ...) {
+void log_print(int level, char *fmt, ...) {
 	char buf[65535];
 	memset(buf, 0, sizeof(buf));
 	va_list arg_list;
@@ -54,6 +54,6 @@ void clog(int level, const char *fmt, ...) {
 	va_end(arg_list);
 	LOCK(&lock);
 	cio_write(logfd, buf, sizeof(buf));
-	LOCK(&lock);
+	UNLOCK(&lock);
 }
 

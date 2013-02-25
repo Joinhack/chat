@@ -1,5 +1,5 @@
-CC=clang
-CFLAGS= -g
+CC=gcc
+CFLAGS= -g -std=gnu99
 OPTS = -lpthread 
 
 
@@ -12,5 +12,5 @@ clean:
 	rm *.o
 	rm server
 
-server: server.o cnet.o cqueue.o cevent.o jmalloc.o cio.o network.o spinlock.o cthread.o cstr.o log.o
+server: server.o cnet.o cqueue.o cevent.o jmalloc.o cio.o network.o spinlock.o cthread.o cstr.o log.o common.o
 	$(CC) -o server $^ $(OPTS) 

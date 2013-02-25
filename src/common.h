@@ -17,4 +17,6 @@ typedef uint64_t msec_t;
 #define USE_KQUEUE
 #endif
 
+void time_now(long *s, int *ms);
+
 #endif /*end define common head*/

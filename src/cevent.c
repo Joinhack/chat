@@ -24,7 +24,6 @@ static int cevents_disable_event_impl(cevents *cevts, int fd, int mask);
 #include "cevent_select.c"
 #endif
 
-
 void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_preproc) {
 	LOCK(&cevts->lock);
 	(cevts->events + fd)->master_preproc = master_preproc;
@@ -162,6 +161,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 	LOCK(&cevts->lock);
 	rs = cevents_poll_impl(cevts, ms);
 	UNLOCK(&cevts->lock);
+	time_now(&cevts->poll_sec, &cevts->poll_ms);
 	if(rs > 0) {
 		for(i = 0; i < rs; i++) {
 			fired = cevts->fired + i;

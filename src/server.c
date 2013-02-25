@@ -43,7 +43,7 @@ static server *create_server() {
 		destroy_server(svr);
 		return NULL;
 	}
-	svr->logfd = fileno(stderr);
+	svr->logfd = fileno(stdout);
 	log_init(svr->logfd);
 
 	//TODO: set size from config
@@ -53,7 +53,6 @@ static server *create_server() {
 		return NULL;
 	}
 	svr->evts = cevents_create();
-	INFO("use %s\n", svr->evts->impl_name);
 	return svr;
 }
 
@@ -75,6 +74,7 @@ int mainLoop(server *svr) {
 				}
 			}
 		}
+		INFO("used memory: %lu\n", used_mem());
 	}
 	return 0;
 }
