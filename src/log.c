@@ -31,7 +31,7 @@ static void now(char *buf, size_t len) {
 	memset(tbuf, 0, sizeof(tbuf));
 	gettimeofday(&now, NULL);
 	current_tv = now.tv_sec;
-	strftime(tbuf, sizeof(tbuf),"%m-%d  %H:%M:%S.",localtime(&current_tv));
+	strftime(tbuf, sizeof(tbuf),"%m/%d  %H:%M:%S.",localtime(&current_tv));
 	strcat(tbuf, "%ld");
 	snprintf(buf, len, tbuf, now.tv_usec/1000);
 }

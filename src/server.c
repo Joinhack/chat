@@ -15,6 +15,7 @@ typedef struct {
 	int in_fd;
 	int un_fd;
 	int logfd;
+	pid_t pid;
 	long last_info_time;
 	cevents *evts;
 	cthr_pool *thr_pool;
@@ -78,7 +79,7 @@ int mainLoop(server *svr) {
 		}
 		if(svr->last_info_time + 2 <= svr->evts->poll_sec) {
 				svr->last_info_time = svr->evts->poll_sec;
-				INFO("USED MEMOERY: %lu\n", used_mem());
+				INFO("memory used:%lu, total:%lu\n", used_mem(), total_mem());
 		}
 	}
 	return 0;
