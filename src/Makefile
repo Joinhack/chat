@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS= -g -std=gnu99 -DUSE_PROCFILE
+CFLAGS= -g -std=gnu99 
 OPTS = -lpthread 
 
 
