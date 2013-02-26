@@ -94,7 +94,8 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	char buff[2048];
 	nread = read(fd, buff, sizeof(buff));
 	if(nread < 0) {
-		if(errno == EAGAIN) {	
+		if(errno == EAGAIN) {
+			DEBUG("rebind read event\n");
 			return cevents_add_event(cevts, fd, CEV_READ, read_event_proc, io);
 		}
 		cio_close_destroy(cevts, io);
