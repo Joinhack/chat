@@ -11,16 +11,6 @@
 #include "cthread.h"
 #include "network.h"
 
-typedef struct {
-	int in_fd;
-	int un_fd;
-	int logfd;
-	pid_t pid;
-	long last_info_time;
-	cevents *evts;
-	cthr_pool *thr_pool;
-} server;
-
 int create_tcp_server() {
 	int fd;
 	char buff[1024];
@@ -61,6 +51,7 @@ static server *create_server() {
 }
 
 int server_init(server *svr) {
+	svr->connections = 0;
 	cevents_set_master_preproc(svr->evts, svr->in_fd, tcp_accept_event_proc);
 	cevents_add_event(svr->evts, svr->in_fd, CEV_READ, NULL, svr);
 	return 0;
@@ -71,16 +62,21 @@ int mainLoop(server *svr) {
 	for(;;) {
 		ev_num = cevents_poll(svr->evts, 10);
 		if(ev_num > 0) {
-			for(i = 0; i < ev_num; i++) {
-				//all threads is working.
-				if(cthr_pool_run_task(svr->thr_pool, process_event, svr->evts) == -1) {
-					break;
+			//if connections less than 100, use the main thread process or use multi thread process. I think this value should from config.
+			if(svr->connections > 500) {
+				for(i = 0; i < ev_num; i++) {
+					//all threads is working.
+					if(cthr_pool_run_task(svr->thr_pool, process_event, svr->evts) == -1) {
+						break;
+					}
 				}
+			} else {
+				process_event(svr->evts);
 			}
 		}
 		if(svr->last_info_time + 2 <= svr->evts->poll_sec) {
 				svr->last_info_time = svr->evts->poll_sec;
-				INFO("memory used:%lu, total:%lu\n", used_mem(), total_mem());
+				INFO("total connections:%lu, memory used:%lu\n", svr->connections, used_mem());
 		}
 	}
 	return 0;

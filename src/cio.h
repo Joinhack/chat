@@ -15,6 +15,7 @@ typedef struct {
 	int wcount;
 	char ip[128];
 	int port;
+	void *priv;
 } cio;
 
 int cio_set_noblock(int fd);

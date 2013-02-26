@@ -19,6 +19,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	char ip[24];
 	int port;
 	int clifd;
+	server *svr;
 	cio *io;
 	memset(buff, 0, sizeof(buff));
 	memset(ip, 0, sizeof(ip));
@@ -32,13 +33,19 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->port = port;
 	io->fd = clifd;
 	io->type = IO_TCP;
+	io->priv = priv;
 	cio_install_read_events(cevts, io);
+	svr = (server*)priv;
+	atomic_add_uint32(&svr->connections, 1);
 	return 1;
 }
 
 static void cio_close_destroy(cevents *evts, cio *io) {
+	server *svr;
 	//cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE);
 	DEBUG("client %s:%d closed\n", io->ip, io->port);
+	svr = (server*)io->priv;
+	atomic_sub_uint32(&svr->connections, 1);
 	close(io->fd);
 	cio_destroy(io);
 }

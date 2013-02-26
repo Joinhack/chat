@@ -48,6 +48,7 @@ cio *cio_create() {
 	io->rbuf = cstr_create(1024);
 	io->wbuf = cstr_create(1024);
 	io->wcount = 0;
+	io->priv = NULL;
 	return io;
 }
 
