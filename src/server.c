@@ -63,7 +63,7 @@ int mainLoop(server *svr) {
 		ev_num = cevents_poll(svr->evts, 10);
 		if(ev_num > 0) {
 			//if connections less than 100, use the main thread process or use multi thread process. I think this value should from config.
-			if(svr->connections > 500) {
+			if(svr->connections > 100) {
 				for(i = 0; i < ev_num; i++) {
 					//all threads is working.
 					if(cthr_pool_run_task(svr->thr_pool, process_event, svr->evts) == -1) {
