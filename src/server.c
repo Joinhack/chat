@@ -69,7 +69,7 @@ int server_init(server *svr) {
 int mainLoop(server *svr) {
 	int ev_num, i, ret;
 	for(;;) {
-		ev_num = cevents_poll(svr->evts, 50);
+		ev_num = cevents_poll(svr->evts, 10);
 		if(ev_num > 0) {
 			for(i = 0; i < ev_num; i++) {
 				//all threads is working.

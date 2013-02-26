@@ -178,6 +178,6 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 		}
 	}
 	//must sleep, let other thread grant the lock. maybe removed when the time event added.
-	usleep(1);
+	usleep(2);
 	return count;
 }
