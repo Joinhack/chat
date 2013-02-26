@@ -28,6 +28,8 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	}
 	//TODO: maybe there add cio queue.
 	io = cio_create();
+	strcpy(io->ip, ip);
+	io->port = port;
 	io->fd = clifd;
 	io->type = IO_TCP;
 	cio_install_read_events(cevts, io);
@@ -36,7 +38,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 
 static void cio_close_destroy(cevents *evts, cio *io) {
 	//cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE);
-	DEBUG("client closed\n");
+	DEBUG("client %s:%d closed\n", io->ip, io->port);
 	close(io->fd);
 	cio_destroy(io);
 }

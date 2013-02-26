@@ -13,6 +13,8 @@ typedef struct {
 	cstr rbuf;
 	cstr wbuf;
 	int wcount;
+	char ip[128];
+	int port;
 } cio;
 
 int cio_set_noblock(int fd);
