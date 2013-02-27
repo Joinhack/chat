@@ -16,7 +16,7 @@ int create_tcp_server() {
 	char buff[1024];
 	fd = cnet_tcp_server("0.0.0.0", 8081, buff, sizeof(buff));
 	if(fd < 0) {
-		ERROR("%s\n", buff);
+		ERROR("%s", buff);
 		return -1;
 	}
 	cio_set_noblock(fd);
@@ -86,6 +86,7 @@ int mainLoop(server *svr) {
 int main(int argc, char const *argv[]) {
 	server *svr;
 	svr = create_server();
+	if(!svr) return -1;
 	server_init(svr);
 	INFO("server started.\n");	
 	mainLoop(svr);
