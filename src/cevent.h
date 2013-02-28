@@ -9,6 +9,8 @@
 #define CEV_NONE 0x0
 #define CEV_READ 0x1
 #define CEV_WRITE 0x1<<1
+//persis mean don't remove event after poll, implicitly use main thread process.
+#define CEV_PERSIST 0x1<<2
 
 typedef struct _cevents cevents;
 
@@ -18,7 +20,6 @@ typedef struct {
 	int mask;
 	event_proc *read_proc;
 	event_proc *write_proc;
-	event_proc *master_preproc;
 	void *priv;
 } cevent;
 
@@ -48,7 +49,6 @@ void cevents_destroy(cevents *cevts);
 int cevents_add_event(cevents *cevts, int fd, int mask, event_proc *proc, void *priv);
 int cevents_del_event(cevents *cevts, int fd, int mask);
 int cevents_poll(cevents *cevts, msec_t ms);
-void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_preproc);
 void cevents_push_fired(cevents *cevts, cevent_fired *fired);
 cevent_fired *cevents_pop_fired(cevents *cevts);
 

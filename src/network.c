@@ -122,16 +122,9 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	return 0;
 }
 
-static int cio_preproc(cevents *cevts, int fd, void *priv, int mask) {
-	return cevents_del_event(cevts, fd, CEV_READ|CEV_WRITE);
-}
-
 static int cio_install_read_events(cevents *cevts, cio *io) {
 	//TODO: process the ret value.
-	int rs;
-	cevents_set_master_preproc(cevts, io->fd, cio_preproc);
-	rs = cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
-	return rs;
+	return cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 }
 
 void *process_event(void *priv) {

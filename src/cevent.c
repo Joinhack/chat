@@ -25,12 +25,6 @@ static int cevents_disable_event_impl(cevents *cevts, int fd, int mask);
 #include "cevent_select.c"
 #endif
 
-void cevents_set_master_preproc(cevents *cevts, int fd, event_proc *master_preproc) {
-	LOCK(&cevts->lock);
-	(cevts->events + fd)->master_preproc = master_preproc;
-	UNLOCK(&cevts->lock);
-}
-
 void cevents_push_fired(cevents *cevts, cevent_fired *fired) {
 	LOCK(&cevts->qlock);
 	cqueue_push(cevts->fired_queue, (void*)fired);
@@ -154,7 +148,7 @@ static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
 
 //return push queue count or J_ERR
 int cevents_poll(cevents *cevts, msec_t ms) {
-	int rs, i, count = 0;
+	int rs, i, count = 0, flag = 0;
 	cevent_fired *fired;
 	cevent *evt;
 	if(cevts == NULL) {
@@ -169,9 +163,20 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 		for(i = 0; i < rs; i++) {
 			fired = cevts->fired + i;
 			evt = cevts->events + fired->fd;
-			if(evt->master_preproc != NULL) {
-				if(evt->master_preproc(cevts, fired->fd, evt->priv, fired->mask))
+			if(evt->mask & CEV_PERSIST) {
+				fired->mask |= CEV_PERSIST;
+				if(fired->mask & CEV_READ) {
+					flag = evt->read_proc(cevts, fired->fd, evt->priv, fired->mask); 
+				}
+				flag <<= 1;
+				if(fired->mask & CEV_WRITE) {
+					flag |= evt->write_proc(cevts, fired->fd, evt->priv, fired->mask);
+				}
+				if(flag)
 					continue;
+			} else {
+				//unbind the events.
+				cevents_del_event(cevts, fired->fd, fired->mask);
 			}
 			cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
 			count++;
