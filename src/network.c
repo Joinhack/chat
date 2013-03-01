@@ -13,6 +13,8 @@ static int cio_install_read_events(cevents *cevts, cio *io);
 
 static int _reply(cevents *cevts, cio *io);
 
+static int try_process_command(cio *io);
+
 //always return 0, don't push fired event queue
 int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	char buff[2048];
@@ -96,25 +98,43 @@ int process_commond(cevents *cevts, cio *io) {
 	return reply_str(cevts, io, "+pong\r\n");
 }
 
-//just for test.
-int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
-	cio *io = (cio*)priv;
-	int ret, nread;
-	char buff[2048];
-	nread = read(fd, buff, sizeof(buff));
+int _read_process(cio *io) {
+	char buf[2048];
+	int rs, nread;
+	nread = read(io->fd, buf, sizeof(buf));
 	if(nread < 0) {
 		if(errno == EAGAIN) {
 			DEBUG("rebind read event\n");
-			return cevents_add_event(cevts, fd, CEV_READ, read_event_proc, io);
+			return 1;
 		}
-		cio_close_destroy(cevts, io);
 		return -1;
 	}
 	if(nread == 0) {
-		cio_close_destroy(cevts, io);
-		return 0;
+		return -1;
 	}
-	cstr_ncat(io->rbuf, buff, nread);
+	cstr_ncat(io->rbuf, buf, nread);
+	rs = try_process_command(io);
+	if(rs) return rs;
+	return 0;
+}
+
+static int try_process_command(cio *io) {
+	return 0;
+}
+
+//just for test.
+int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
+	cio *io = (cio*)priv;
+	int rs;
+	rs = _read_process(io);
+	if(rs == 1) {
+		cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+		return rs;
+	}
+	if(rs < 0) {
+		cio_close_destroy(cevts, io);
+		return rs;
+	}
 	if(process_commond(cevts, io) != 0) {
 		ERROR("error process command\n");
 		return -1;
@@ -128,7 +148,7 @@ static int cio_install_read_events(cevents *cevts, cio *io) {
 }
 
 void *process_event(void *priv) {
-	int ret;
+	int rs;
 	cevents *cevts = (cevents*)priv;
 	cevent_fired *evt_fired, evt;
 	while(1) {
