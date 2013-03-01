@@ -14,8 +14,6 @@ static int read_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
 static int reply_str(cevents *cevts, cio *io, char *buff);
 
-static int cio_install_read_events(cevents *cevts, cio *io);
-
 static int write_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
 static int _reply(cevents *cevts, cio *io);
@@ -43,7 +41,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->fd = clifd;
 	io->type = IO_TCP;
 	io->priv = priv;
-	cio_install_read_events(cevts, io);
+	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 	svr = (server*)priv;
 	atomic_add_uint32(&svr->connections, 1);
 	return 1;
@@ -155,11 +153,6 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		return -1;
 	}
 	return 0;
-}
-
-static int cio_install_read_events(cevents *cevts, cio *io) {
-	//TODO: process the ret value.
-	return cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 }
 
 void *process_event(void *priv) {
