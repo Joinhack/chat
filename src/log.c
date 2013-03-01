@@ -52,7 +52,7 @@ void log_print(int level, char *fmt, ...) {
 	log_fmt(buf, sizeof(buf), level, fmt, arg_list);
 	va_end(arg_list);
 	LOCK(&lock);
-	cio_write(logfd, buf, sizeof(buf));
+	cio_write(logfd, buf, strlen(buf));
 	UNLOCK(&lock);
 }
 
