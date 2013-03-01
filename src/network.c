@@ -57,12 +57,8 @@ static void cio_close_destroy(cevents *evts, cio *io) {
 	cio_destroy(io);
 }
 
-int reply_str(cevents *cevts, cio *io, char *buff) {
-	int rs;
-	io->wcount = 0;
-	cstr_ncat(io->wbuf, buff, strlen(buff));
-	rs = _reply(cevts, io);
-	
+int reply(cevents *cevts, cio *io) {
+	int rs = _reply(cevts, io);
 	if(rs == 1) {
 		DEBUG("rebind write event\n");
 		cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
@@ -72,13 +68,22 @@ int reply_str(cevents *cevts, cio *io, char *buff) {
 		cio_close_destroy(cevts, io);
 		return rs;
 	}
+	return 0;
+}
+
+int reply_str(cevents *cevts, cio *io, char *buff) {
+	int rs;
+	io->wcount = 0;
+	cstr_ncat(io->wbuf, buff, strlen(buff));
+	rs = reply(cevts, io);
+	if(rs) return rs;
 	//read try again for next request. in most cases, it just rebind the read event.
 	return read_event_proc(cevts, io->fd, io, 0);
 }
 
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
-	return _reply(cevts, io);
+	return reply(cevts, io);
 }
 
 int _reply(cevents *cevts, cio *io) {
@@ -99,15 +104,6 @@ int _reply(cevents *cevts, cio *io) {
 }
 
 int process_commond(cevents *cevts, cio *io) {
-	size_t nread = cstr_used(io->rbuf);
-	char *end;
-	if(nread <= 0)
-		return -1;
-	end = strstr(io->rbuf, "\r\n");
-	if(end == NULL) {
-		reply_str(cevts, io, "-ERR unknown command\r\n");
-		return cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
-	}
 	return reply_str(cevts, io, "+pong\r\n");
 }
 
@@ -132,6 +128,14 @@ int _read_process(cio *io) {
 }
 
 static int try_process_command(cio *io) {
+	size_t nread = cstr_used(io->rbuf);
+	char *end;
+	if(nread <= 0)
+		return -1;
+	end = strstr(io->rbuf, "\r\n");
+	if(end == NULL) {
+		return 1;
+	}
 	return 0;
 }
 
