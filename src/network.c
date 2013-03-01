@@ -20,6 +20,10 @@ static int _reply(cevents *cevts, cio *io);
 
 static int try_process_command(cio *io);
 
+int read_event_proc_for_persist(cevents *cevts, int fd, void *priv, int mask);
+
+static int write_event_proc_for_persist(cevents *cevts, int fd, void *priv, int mask);
+
 //always return 0, don't push fired event queue
 int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	char buff[2048];
@@ -41,7 +45,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->fd = clifd;
 	io->type = IO_TCP;
 	io->priv = priv;
-	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc_for_persist, io);
 	svr = (server*)priv;
 	atomic_add_uint32(&svr->connections, 1);
 	return 1;
@@ -49,12 +53,16 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 
 static void cio_close_destroy(cevents *evts, cio *io) {
 	server *svr;
-	//cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE);
 	DEBUG("client %s:%d closed\n", io->ip, io->port);
 	svr = (server*)io->priv;
 	atomic_sub_uint32(&svr->connections, 1);
 	close(io->fd);
 	cio_destroy(io);
+}
+
+static void cio_close_destroy_for_persist(cevents *evts, cio *io) {
+	cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);
+	cio_close_destroy(evts, io);
 }
 
 int reply(cevents *cevts, cio *io) {
@@ -71,6 +79,16 @@ int reply(cevents *cevts, cio *io) {
 	return 0;
 }
 
+int reply_for_persist(cevents *cevts, cio *io) {
+	int rs = _reply(cevts, io);
+	if(rs < 0) {
+		cio_close_destroy_for_persist(cevts, io);
+		return rs;
+	}
+	cevents_del_event(cevts, io->fd, CEV_WRITE);
+	return 0;
+}
+
 int reply_str(cevents *cevts, cio *io, char *buff) {
 	int rs;
 	io->wcount = 0;
@@ -79,6 +97,17 @@ int reply_str(cevents *cevts, cio *io, char *buff) {
 	if(rs) return rs;
 	//read try again for next request. in most cases, it just rebind the read event.
 	return read_event_proc(cevts, io->fd, io, 0);
+}
+
+int reply_str_for_persist(cevents *cevts, cio *io, char *buff) {
+	cstr_ncat(io->wbuf, buff, strlen(buff));
+	cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc_for_persist, io);
+	return 0;
+}
+
+int write_event_proc_for_persist(cevents *cevts, int fd, void *priv, int mask) {
+	cio *io = (cio*)priv;
+	return reply_for_persist(cevts, io);
 }
 
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
@@ -105,6 +134,10 @@ int _reply(cevents *cevts, cio *io) {
 
 int process_commond(cevents *cevts, cio *io) {
 	return reply_str(cevts, io, "+pong\r\n");
+}
+
+int process_commond_persist(cevents *cevts, cio *io) {
+	return reply_str_for_persist(cevts, io, "+pong\r\n");
 }
 
 int _read_process(cio *io) {
@@ -159,6 +192,17 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	return 0;
 }
 
+int read_event_proc_for_persist(cevents *cevts, int fd, void *priv, int mask) {
+	cio *io = (cio*)priv;
+	int rs;
+	rs = _read_process(io);
+	if(rs < 0) {
+		cio_close_destroy_for_persist(cevts, io);
+		return rs;
+	}
+	return 0;
+}
+
 void *process_event(void *priv) {
 	int rs;
 	cevents *cevts = (cevents*)priv;
@@ -170,12 +214,15 @@ void *process_event(void *priv) {
 		//copy it, and destroy it.
 		evt = *evt_fired;
 		jfree(evt_fired);
-
-		if(evt.mask & CEV_READ) {
-			evt.read_proc(cevts, evt.fd, evt.priv, evt.mask);
-		}
-		if(evt.mask & CEV_WRITE) {
-			evt.write_proc(cevts, evt.fd, evt.priv, evt.mask);
+		if(evt.mask & CEV_PERSIST) {
+			process_commond_persist(cevts, (cio*)evt.priv);
+		} else {
+			if(evt.mask & CEV_READ) {
+				evt.read_proc(cevts, evt.fd, evt.priv, evt.mask);
+			}
+			if(evt.mask & CEV_WRITE) {
+				evt.write_proc(cevts, evt.fd, evt.priv, evt.mask);
+			}
 		}
 	}
 	return NULL;
