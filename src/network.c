@@ -70,6 +70,10 @@ int reply_str(cevents *cevts, cio *io, char *buff) {
 		cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
 		return rs;
 	}
+	if(rs < 0) {
+		cio_close_destroy(cevts, io);
+		return rs;
+	}
 	return read_event_proc(cevts, io->fd, io, 0);
 }
 
@@ -87,7 +91,6 @@ int _reply(cevents *cevts, cio *io) {
 			if(errno == EAGAIN) {
 				return 1;
 			}
-			cio_close_destroy(cevts, io);
 			return -1;
 		}
 		io->wcount += nwrite;
