@@ -74,6 +74,7 @@ int reply_str(cevents *cevts, cio *io, char *buff) {
 		cio_close_destroy(cevts, io);
 		return rs;
 	}
+	//read try again for next request. in most cases, it just rebind the read event.
 	return read_event_proc(cevts, io->fd, io, 0);
 }
 
