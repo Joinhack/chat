@@ -166,20 +166,20 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 			if(evt->mask & CEV_PERSIST) {
 				fired->mask |= CEV_PERSIST;
 				if(fired->mask & CEV_READ) {
-					flag = evt->read_proc(cevts, fired->fd, evt->priv, fired->mask); 
+					//just send read event to event queue.
+					if(evt->read_proc(cevts, fired->fd, evt->priv, fired->mask) == 0) {cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
+						count++;
+					}
 				}
-				flag <<= 1;
 				if(fired->mask & CEV_WRITE) {
-					flag |= evt->write_proc(cevts, fired->fd, evt->priv, fired->mask);
+					evt->write_proc(cevts, fired->fd, evt->priv, fired->mask);
 				}
-				if(flag)
-					continue;
 			} else {
 				//unbind the events.
 				cevents_del_event(cevts, fired->fd, fired->mask);
+				cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
+				count++;
 			}
-			cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
-			count++;
 		}
 	}
 	//must sleep, let other thread grant the lock. maybe removed when the time event added.
