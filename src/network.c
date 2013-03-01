@@ -9,7 +9,14 @@
 #include "network.h"
 #include "log.h"
 
+
+static int read_event_proc(cevents *cevts, int fd, void *priv, int mask);
+
+static int reply_str(cevents *cevts, cio *io, char *buff);
+
 static int cio_install_read_events(cevents *cevts, cio *io);
+
+static int write_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
 static int _reply(cevents *cevts, cio *io);
 
@@ -53,9 +60,17 @@ static void cio_close_destroy(cevents *evts, cio *io) {
 }
 
 int reply_str(cevents *cevts, cio *io, char *buff) {
+	int rs;
 	io->wcount = 0;
 	cstr_ncat(io->wbuf, buff, strlen(buff));
-	return _reply(cevts, io);
+	rs = _reply(cevts, io);
+	
+	if(rs == 1) {
+		DEBUG("rebind write event\n");
+		cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
+		return rs;
+	}
+	return read_event_proc(cevts, io->fd, io, 0);
 }
 
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
@@ -70,9 +85,7 @@ int _reply(cevents *cevts, cio *io) {
 		if(nwrite < 0) {
 			//continue;
 			if(errno == EAGAIN) {
-				DEBUG("rebind write event\n");
-				cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
-				return 0;
+				return 1;
 			}
 			cio_close_destroy(cevts, io);
 			return -1;
@@ -80,8 +93,6 @@ int _reply(cevents *cevts, cio *io) {
 		io->wcount += nwrite;
 	}
 	cio_clear(io);
-	//cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
-	read_event_proc(cevts, io->fd, io, 0);
 	return 0;
 }
 
@@ -135,7 +146,7 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		cio_close_destroy(cevts, io);
 		return rs;
 	}
-	if(process_commond(cevts, io) != 0) {
+	if(process_commond(cevts, io) < 0) {
 		ERROR("error process command\n");
 		return -1;
 	}
