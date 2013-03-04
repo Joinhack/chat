@@ -85,6 +85,7 @@ int reply_str(cevents *cevts, cio *io, int mask, char *buff) {
 	int rs;
 	io->wcount = 0;
 	cstr_ncat(io->wbuf, buff, strlen(buff));
+	//if not persist we direct to reponse the result, else use main thread for io.
 	if(!(mask & CEV_PERSIST)) {
 		rs = response(cevts, io, mask);
 		if(rs) return rs;
