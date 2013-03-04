@@ -9,7 +9,7 @@
 #define CEV_NONE 0x0
 #define CEV_READ 0x1
 #define CEV_WRITE 0x1<<1
-//persist mean don't remove event after poll, implicitly use main thread for read io , parse command and write reponse. else push the events to backend, let backend thread process.
+//persist mean don't remove event after poll, implicitly use main thread for read io , parse command and write reponse. else push the events to backend, let backend thread process. 
 #define CEV_PERSIST 0x1<<2
 
 typedef struct _cevents cevents;
