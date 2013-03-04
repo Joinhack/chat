@@ -12,17 +12,13 @@
 
 static int read_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
-static int reply_str(cevents *cevts, cio *io, char *buff);
+static int reply_str(cevents *cevts, cio *io, int mask,char *buff);
 
 static int write_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
-static int _reply(cevents *cevts, cio *io);
+static int _response(cevents *cevts, cio *io);
 
 static int try_process_command(cio *io);
-
-int read_event_proc_for_persist(cevents *cevts, int fd, void *priv, int mask);
-
-static int write_event_proc_for_persist(cevents *cevts, int fd, void *priv, int mask);
 
 //always return 0, don't push fired event queue
 int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
@@ -45,77 +41,65 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->fd = clifd;
 	io->type = IO_TCP;
 	io->priv = priv;
-	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc_for_persist, io);
+	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
 	svr = (server*)priv;
 	atomic_add_uint32(&svr->connections, 1);
 	return 1;
 }
 
-static void cio_close_destroy(cevents *evts, cio *io) {
+static void cio_close_destroy(cevents *evts, cio *io, int mask) {
 	server *svr;
 	DEBUG("client %s:%d closed\n", io->ip, io->port);
+	if(mask & CEV_PERSIST)
+		cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);	
 	svr = (server*)io->priv;
 	atomic_sub_uint32(&svr->connections, 1);
 	close(io->fd);
 	cio_destroy(io);
 }
 
-static void cio_close_destroy_for_persist(cevents *evts, cio *io) {
-	cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);
-	cio_close_destroy(evts, io);
-}
-
-int reply(cevents *cevts, cio *io) {
-	int rs = _reply(cevts, io);
-	if(rs == 1) {
+int response(cevents *cevts, cio *io, int mask) {
+	int persist = mask & CEV_PERSIST;
+	int rs = _response(cevts, io);
+	//if not use CEV_PERSIST, when the event fired, all events is removed, so should rebind write event.
+	if(!persist && rs == 1) {
 		DEBUG("rebind write event\n");
 		cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
 		return rs;
 	}
 	if(rs < 0) {
-		cio_close_destroy(cevts, io);
+		cio_close_destroy(cevts, io, mask);
 		return rs;
 	}
+
+	//if use CEV_PERSIST, we should disable write event fired.
+	if(persist)
+		cevents_del_event(cevts, io->fd, CEV_WRITE);
+	else
+		//read try again for next request. in most cases, it just rebind the read event.
+		return read_event_proc(cevts, io->fd, io, 0);
 	return 0;
 }
 
-int reply_for_persist(cevents *cevts, cio *io) {
-	int rs = _reply(cevts, io);
-	if(rs < 0) {
-		cio_close_destroy_for_persist(cevts, io);
-		return rs;
-	}
-	cevents_del_event(cevts, io->fd, CEV_WRITE);
-	return 0;
-}
-
-int reply_str(cevents *cevts, cio *io, char *buff) {
+int reply_str(cevents *cevts, cio *io, int mask, char *buff) {
 	int rs;
 	io->wcount = 0;
 	cstr_ncat(io->wbuf, buff, strlen(buff));
-	rs = reply(cevts, io);
-	if(rs) return rs;
-	//read try again for next request. in most cases, it just rebind the read event.
-	return read_event_proc(cevts, io->fd, io, 0);
-}
-
-int reply_str_for_persist(cevents *cevts, cio *io, char *buff) {
-	cstr_ncat(io->wbuf, buff, strlen(buff));
-	cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc_for_persist, io);
+	if(!(mask & CEV_PERSIST)) {
+		rs = response(cevts, io, mask);
+		if(rs) return rs;
+	} else {
+		cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
+	}
 	return 0;
-}
-
-int write_event_proc_for_persist(cevents *cevts, int fd, void *priv, int mask) {
-	cio *io = (cio*)priv;
-	return reply_for_persist(cevts, io);
 }
 
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
-	return reply(cevts, io);
+	return response(cevts, io, mask);
 }
 
-int _reply(cevents *cevts, cio *io) {
+int _response(cevents *cevts, cio *io) {
 	int nwrite;
 	while(cstr_used(io->wbuf) != io->wcount) {	
 		nwrite = write(io->fd, io->wbuf + io->wcount, cstr_used(io->wbuf) - io->wcount);
@@ -132,13 +116,10 @@ int _reply(cevents *cevts, cio *io) {
 	return 0;
 }
 
-int process_commond(cevents *cevts, cio *io) {
-	return reply_str(cevts, io, "+pong\r\n");
+int process_commond(cevents *cevts, cio *io, int mask) {
+	return reply_str(cevts, io, mask, "+pong\r\n");
 }
 
-int process_commond_persist(cevents *cevts, cio *io) {
-	return reply_str_for_persist(cevts, io, "+pong\r\n");
-}
 
 int _read_process(cio *io) {
 	char buf[2048];
@@ -146,7 +127,6 @@ int _read_process(cio *io) {
 	nread = read(io->fd, buf, sizeof(buf));
 	if(nread < 0) {
 		if(errno == EAGAIN) {
-			DEBUG("rebind read event\n");
 			return 1;
 		}
 		return -1;
@@ -175,30 +155,22 @@ static int try_process_command(cio *io) {
 //just for test.
 int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
-	int rs;
+	int rs, persist = (mask & CEV_PERSIST);
 	rs = _read_process(io);
-	if(rs == 1) {
+	if(!persist && rs == 1) {
 		cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 		return rs;
 	}
 	if(rs < 0) {
-		cio_close_destroy(cevts, io);
+		cio_close_destroy(cevts, io, mask);
 		return rs;
 	}
-	if(process_commond(cevts, io) < 0) {
-		ERROR("error process command\n");
-		return -1;
-	}
-	return 0;
-}
-
-int read_event_proc_for_persist(cevents *cevts, int fd, void *priv, int mask) {
-	cio *io = (cio*)priv;
-	int rs;
-	rs = _read_process(io);
-	if(rs < 0) {
-		cio_close_destroy_for_persist(cevts, io);
-		return rs;
+	//if not CEV_PERSIST event, we should process command.
+	if(!persist) {
+		if(process_commond(cevts, io, mask) < 0) {
+			ERROR("error process command\n");
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -215,7 +187,7 @@ void *process_event(void *priv) {
 		evt = *evt_fired;
 		jfree(evt_fired);
 		if(evt.mask & CEV_PERSIST) {
-			process_commond_persist(cevts, (cio*)evt.priv);
+			process_commond(cevts, (cio*)evt.priv, evt.mask);
 		} else {
 			if(evt.mask & CEV_READ) {
 				evt.read_proc(cevts, evt.fd, evt.priv, evt.mask);
