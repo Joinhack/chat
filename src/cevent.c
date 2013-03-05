@@ -31,12 +31,15 @@ void cevents_push_fired(cevents *cevts, cevent_fired *fired) {
 	UNLOCK(&cevts->qlock);
 }
 
-cevent_fired *cevents_pop_fired(cevents *cevts) {
+int cevents_pop_fired(cevents *cevts, cevent_fired *fired) {
 	cevent_fired *fevt;
 	LOCK(&cevts->qlock);
 	fevt = (cevent_fired*)cqueue_pop(cevts->fired_queue);
 	UNLOCK(&cevts->qlock);
-	return fevt;
+	if(fevt == NULL) return 0;
+	*fired = *fevt;
+	jfree(fevt);
+	return 1;
 }
 
 cevents *cevents_create() {
@@ -138,11 +141,7 @@ int cevents_del_event(cevents *cevts, int fd, int mask) {
 static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
 	cevent *cevent = cevts->events + fired->fd;
 	cevent_fired *new_cevent_fired = jmalloc(sizeof(cevent_fired));
-	new_cevent_fired->fd = fired->fd;
-	new_cevent_fired->mask = fired->mask;
-	new_cevent_fired->read_proc = cevent->read_proc;
-	new_cevent_fired->write_proc = cevent->write_proc;
-	new_cevent_fired->priv = cevent->priv;
+	*new_cevent_fired = *fired;
 	return new_cevent_fired;
 }
 

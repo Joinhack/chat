@@ -26,9 +26,6 @@ typedef struct {
 typedef struct {
 	int mask;
 	int fd;
-	event_proc *read_proc;
-	event_proc *write_proc;
-	void *priv;
 } cevent_fired;
 
 struct _cevents {
@@ -50,7 +47,7 @@ int cevents_add_event(cevents *cevts, int fd, int mask, event_proc *proc, void *
 int cevents_del_event(cevents *cevts, int fd, int mask);
 int cevents_poll(cevents *cevts, msec_t ms);
 void cevents_push_fired(cevents *cevts, cevent_fired *fired);
-cevent_fired *cevents_pop_fired(cevents *cevts);
+int cevents_pop_fired(cevents *cevts, cevent_fired *fired);
 
 
 #endif /*end define cevent**/

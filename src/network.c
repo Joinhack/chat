@@ -41,7 +41,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->fd = clifd;
 	io->type = IO_TCP;
 	io->priv = priv;
-	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 	svr = (server*)priv;
 	atomic_add_uint32(&svr->connections, 1);
 	return 1;
@@ -179,22 +179,20 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 void *process_event(void *priv) {
 	int rs;
 	cevents *cevts = (cevents*)priv;
-	cevent_fired *evt_fired, evt;
+	cevent_fired fired;
+	cevent *evt;
 	while(1) {
-		evt_fired = (cevent_fired*)cevents_pop_fired(cevts);
-		if(evt_fired == NULL)
+		if(cevents_pop_fired(cevts, &fired) == 0)
 			return NULL;
-		//copy it, and destroy it.
-		evt = *evt_fired;
-		jfree(evt_fired);
-		if(evt.mask & CEV_PERSIST) {
-			process_commond(cevts, (cio*)evt.priv, evt.mask);
+		evt = cevts->events + fired.fd;
+		if(fired.mask & CEV_PERSIST) {
+			process_commond(cevts, (cio*)evt->priv, fired.mask);
 		} else {
-			if(evt.mask & CEV_READ) {
-				evt.read_proc(cevts, evt.fd, evt.priv, evt.mask);
+			if(fired.mask & CEV_READ) {
+				evt->read_proc(cevts, fired.fd, evt->priv, fired.mask);
 			}
-			if(evt.mask & CEV_WRITE) {
-				evt.write_proc(cevts, evt.fd, evt.priv, evt.mask);
+			if(fired.mask & CEV_WRITE) {
+				evt->write_proc(cevts, fired.fd, evt->priv, fired.mask);
 			}
 		}
 	}
