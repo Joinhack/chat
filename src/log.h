@@ -3,8 +3,9 @@
 #include "common.h"
 
 enum LOG_LEVEL {
-	LEVEL_INFO=0,
+	LEVEL_TRACE=0,
 	LEVEL_DEBUG,
+	LEVEL_INFO,
 	LEVEL_WARN,
 	LEVEL_ERR
 };
@@ -19,10 +20,12 @@ void log_print(int level, char *fmt, ...);
 
 #define WARN(fmt, ...) log_print(LEVEL_WARN, fmt, ##__VA_ARGS__)
 
-#ifdef USE_DEBUG
-#define DEBUG(fmt, ...) log_print(LEVEL_DEBUG, fmt, ##__VA_ARGS__) 
+#define DEBUG(fmt, ...) log_print(LEVEL_DEBUG, fmt, ##__VA_ARGS__)
+
+#ifdef USE_TRACE
+#define TRACE(fmt, ...) log_print(LEVEL_TRACE, fmt, ##__VA_ARGS__) 
 #else
-#define DEBUG(fmt, ...)
+#define TRACE(fmt, ...)
 #endif
 
 #endif /**LOG_H*/

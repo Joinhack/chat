@@ -7,8 +7,9 @@
 #include "cio.h"
 
 static const char* level_array[] = {
-	"INFO",
+	"TRACE",
 	"DEBUG",
+	"INFO",
 	"WARN",
 	"ERR"
 };
@@ -18,9 +19,15 @@ static int logfd;
 //define use mutex for log lock.
 static LOCK_T lock;
 
+static int top_level = LEVEL_TRACE;
+
 void log_init(int fd) {
 	logfd = fd;
 	LOCK_INIT(&lock);
+}
+
+void set_top_level(int level) {
+	top_level = level;
 }
 
 static void now(char *buf, size_t len) {
@@ -46,6 +53,8 @@ static void log_fmt(char *buf, size_t len, int level, const char *fmt, va_list a
 
 void log_print(int level, char *fmt, ...) {
 	char buf[65535];
+	if(level < top_level)
+		return;
 	memset(buf, 0, sizeof(buf));
 	va_list arg_list;
 	va_start(arg_list, fmt);
