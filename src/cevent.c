@@ -163,17 +163,19 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 		for(i = 0; i < rs; i++) {
 			fired = cevts->fired + i;
 			evt = cevts->events + fired->fd;
+			if(!evt->mask)
+				continue;
 			if(evt->mask & CEV_PERSIST) {
 				fired->mask |= CEV_PERSIST;
 
-				if(fired->mask & CEV_READ) {
+				if(evt->mask && (fired->mask & CEV_READ)) {
 					//just send read event to event queue.
 					if(evt->read_proc(cevts, fired->fd, evt->priv, fired->mask) == 0) {
 						cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
 						count++;
 					}
 				}
-				if(fired->mask & CEV_WRITE) {
+				if(evt->mask && (fired->mask & CEV_WRITE)) {
 					evt->write_proc(cevts, fired->fd, evt->priv, fired->mask);
 				}
 			} else {
