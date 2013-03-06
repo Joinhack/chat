@@ -170,6 +170,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 				if(evt->mask && (fired->mask & CEV_READ)) {
 					//just send read event to event queue.
 					if(evt->read_proc(cevts, fired->fd, evt->priv, fired->mask) == 0) {
+						//disable read event when backend thread process command, like client close connection
 						cevents_del_event(cevts, fired->fd, CEV_READ);
 						cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
 						count++;
