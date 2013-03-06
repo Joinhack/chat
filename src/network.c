@@ -20,6 +20,10 @@ static int _response(cevents *cevts, cio *io);
 
 static int try_process_command(cio *io);
 
+static void install_read_event(cevents *cevts, cio *io) {
+	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
+}
+
 //always return 0, don't push fired event queue
 int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	char buff[2048];
@@ -41,7 +45,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->fd = clifd;
 	io->type = IO_TCP;
 	io->priv = priv;
-	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+	install_read_event(cevts, io);
 	svr = (server*)priv;
 	atomic_add_uint32(&svr->connections, 1);
 	return 1;
@@ -73,9 +77,10 @@ int response(cevents *cevts, cio *io, int mask) {
 	}
 
 	//if use CEV_PERSIST, we should disable write event fired.
-	if(persist)
+	if(persist) {
+		install_read_event(cevts, io);
 		cevents_del_event(cevts, io->fd, CEV_WRITE);
-	else
+	} else
 		//read try again for next request. in most cases, it just rebind the read event.
 		return read_event_proc(cevts, io->fd, io, 0);
 	return 0;
@@ -121,7 +126,6 @@ int process_commond(cevents *cevts, cio *io, int mask) {
 	return reply_str(cevts, io, mask, "+pong\r\n");
 }
 
-
 int _read_process(cio *io) {
 	char buf[2048];
 	int rs, nread;
@@ -159,7 +163,7 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int rs, persist = (mask & CEV_PERSIST);
 	rs = _read_process(io);
 	if(!persist && rs == 1) {
-		cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+		install_read_event(cevts, io);
 		return rs;
 	}
 	if(rs < 0) {
