@@ -21,7 +21,7 @@ static int _response(cevents *cevts, cio *io);
 static int try_process_command(cio *io);
 
 static void install_read_event(cevents *cevts, cio *io) {
-	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 }
 
 //always return 0, don't push fired event queue
@@ -51,15 +51,21 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	return 1;
 }
 
-static void cio_close_destroy(cevents *evts, cio *io, int mask) {
+int cio_close_destroy(cevents *cevts, int fd, void *priv, int mask) {
 	server *svr;
+	cio *io = (cio*)priv;
 	DEBUG("client %s:%d closed\n", io->ip, io->port);
-	if(mask & CEV_PERSIST)
-		cevents_del_event(evts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);	
+	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);	
 	svr = (server*)io->priv;
 	atomic_sub_uint32(&svr->connections, 1);
 	close(io->fd);
 	cio_destroy(io);
+	return 1;
+}
+
+static void cio_close_destroy_install(cevents *cevts, cio *io) {
+	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST,cio_close_destroy, io);
+	cevents_del_event(cevts, io->fd, CEV_WRITE);
 }
 
 int response(cevents *cevts, cio *io, int mask) {
@@ -72,7 +78,7 @@ int response(cevents *cevts, cio *io, int mask) {
 		return rs;
 	}
 	if(rs < 0) {
-		cio_close_destroy(cevts, io, mask);
+		cio_close_destroy_install(cevts, io);
 		return rs;
 	}
 
@@ -167,15 +173,12 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		return rs;
 	}
 	if(rs < 0) {
-		cio_close_destroy(cevts, io, mask);
+		cio_close_destroy_install(cevts, io);
 		return rs;
 	}
 	//if not CEV_PERSIST event, we should process command.
 	if(!persist) {
-		if(process_commond(cevts, io, mask) < 0) {
-			ERROR("error process command\n");
-			return -1;
-		}
+		process_commond(cevts, io, mask);
 	}
 	return 0;
 }
