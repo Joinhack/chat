@@ -12,7 +12,7 @@
 //persist mean don't remove event after poll, implicitly use main thread for read io , parse command and write reponse, except the process command. else push the events to backend, let backend thread process. 
 #define CEV_PERSIST 0x1<<2
 
-typedef struct _cevents cevents;
+typedef struct cevents cevents;
 
 typedef int event_proc(cevents *evts, int fd, void *priv, int mask);
 
@@ -28,7 +28,7 @@ typedef struct {
 	int fd;
 } cevent_fired;
 
-struct _cevents {
+struct cevents {
 	int maxfd;
 	cevent *events; //should be MAX_EVENTS
 	cevent_fired *fired; //should be MAX_EVENTS, push to top level
