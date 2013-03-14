@@ -16,7 +16,7 @@ void *cqueue_pop_mt(void *data) {
 	while(1) {
 		spinlock_lock(&lock);
 		count++;
-		fprintf(stdout, "%ld pop %ld\n", pthread_self(), cqueue_len(cq));
+		fprintf(stdout, "%lu pop %lu\n", (long)pthread_self(), cqueue_len(cq));
 		cqueue_pop(cq);
 		spinlock_unlock(&lock);
 	}
@@ -48,7 +48,7 @@ int main(int argc, char const *argv[]) {
 	for(i = 0; i < 6; i++)
 		cqueue_push(cq, NULL);
 	cqueue_walk_remove(cq, compare, NULL);
-	printf("%d\n", cqueue_len(cq));
+	printf("%lu\n", cqueue_len(cq));
 	cqueue_destroy(cq);
 	return 0;
 }

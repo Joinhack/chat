@@ -10,11 +10,11 @@ void *malloc_test(void *p) {
 	size_t i,times = 50000;
 	for(i = 0; i < times; i++) {
 		ptr = jmalloc(10);
-		printf("%ld\n", used_mem());
+		printf("%llu\n", used_mem());
 		ptr = jrealloc(ptr, 20);
-		printf("%ld\n", used_mem());
+		printf("%llu\n", used_mem());
 		jfree(ptr);
-		printf("%ld\n", used_mem());
+		printf("%llu\n", used_mem());
 	}
 }
 #endif
@@ -33,10 +33,10 @@ int main(int argc, char const *argv[]) {
 		pthread_join(threads[i], &code);
 	}
 #endif
-	printf("%ld\n", used_mem());
+	printf("%llu\n", used_mem());
 	ptr = jrealloc(ptr, 20);
-	printf("%ld\n", used_mem());
+	printf("%llu\n", used_mem());
 	jfree(ptr);
-	printf("%ld\n", used_mem());
+	printf("%llu\n", used_mem());
 	return 0;
 }
