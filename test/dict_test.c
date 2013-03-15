@@ -67,6 +67,7 @@ int main() {
 		}
 		printf("delete %d, %d %llu\n", DICT_SIZE(d), DICT_CAP(d),used_mem());
 	}
+	dict_expand(d, max*2);
 	printf("%d, %d %llu\n", DICT_SIZE(d), DICT_CAP(d),used_mem());
 	printf("%d %llu\n", DICT_CAP(d),used_mem());
 	dict_destroy(d);

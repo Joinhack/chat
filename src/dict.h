@@ -81,6 +81,6 @@ int dict_del_no_free(dict *d, void *key);
 
 #define DICT_HASH(d, key) d->opts->hash(key)
 
-#define DICT_INIT_SIZE 1<<1
+#define DICT_INIT_SIZE 1<<3
 
 #endif /**end define dict*/
