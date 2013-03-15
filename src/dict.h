@@ -19,8 +19,8 @@ typedef struct dict_opts {
 	void *(*key_dup)(const void *key);
 	void *(*value_dup)(const void *key);
 	int (*key_compare)(const void *k1, const void *k2);
-	void (*key_destroy)(const void *key);
-	void (*value_destroy)(const void *v);
+	void (*key_destroy)(void *key);
+	void (*value_destroy)(void *v);
 } dict_opts;
 
 typedef struct dict {
@@ -42,7 +42,11 @@ int dict_expand(dict *d, unsigned int size);
 
 int dict_add(dict *d, void *key, void *val);
 
+int dict_replace(dict *d, void *key, void *val);
+
 int dict_del(dict *d, void *key);
+
+dict_entry *dict_find(dict *d, void *key);
 
 int dict_del_no_free(dict *d, void *key);
 

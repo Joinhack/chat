@@ -154,6 +154,38 @@ int dict_add(dict *d, void *key, void *val) {
 	return 0;
 }
 
+int dict_replace(dict *d, void *key, void *val) {
+	dict_entry *entry;
+	if((entry = dict_find(d, key)) != NULL) {
+		DICT_VALUE_DESTROY(d, entry);
+		DICT_SET_VALUE(d, entry, val);
+		return 0;
+	} else
+		return dict_add(d, key, val);
+}
+
+dict_entry *dict_find(dict *d, void *key) {
+	int i, idx;
+	dict_entry *entry;
+	unsigned int hash;
+	if(d->dt[0].size == 0) return NULL;
+	DICT_TRY_REHASH(d);
+	hash = DICT_HASH(d, key);
+	for(i = 0; i <=1; i++) {
+		idx = hash&d->dt[i].mask;
+		entry = d->dt[i].entries[idx];
+		while(entry) {
+			if(DICT_KEY_COMPARE(d, entry->key, key)) {
+				return entry;
+			}
+			entry = entry->next;
+		}
+		//if is rehashing, should choose dt[1]
+		if(!DICT_IS_REHASHING(d)) break;
+	}
+	return NULL;
+}
+
 static int dict_del_internal(dict *d, void *key, int flag) {
 	int i, idx;
 	dict_entry *entry, *prev;

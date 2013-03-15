@@ -2,7 +2,7 @@ CC = gcc
 INC = ../src
 OPTS = -g
 
-TARGS=cstr_test cnet_test cthread_test jmalloc_test cqueue_test dict_test
+TARGS=cstr_test cnet_test cthread_test jmalloc_test cqueue_test dict_test 
 
 
 all: $(TARGS)
@@ -26,5 +26,5 @@ dict_test:
 	$(CC) -o dict_test dict_test.c  ../src/dict.c ../src/cstr.c ../src/jmalloc.c -I$(INC)  $(OPTS)
 
 clean: 
-	rm $(TARGS)
+	rm -rf *.dSYM $(TARGS)
 
