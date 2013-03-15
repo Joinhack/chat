@@ -56,6 +56,9 @@ void dict_destroy(dict *d) {
 	jfree(d);
 }
 
+/**
+ *if is rehashing move data from old to new hash table
+ */
 int dict_rehash(dict *d, int n) {
 	dict_entry *entry, *next;
 	if(!DICT_IS_REHASHING(d)) return 0;
@@ -75,7 +78,7 @@ int dict_rehash(dict *d, int n) {
 			unsigned int idx; 
 			next = entry->next;
 			idx = DICT_HASH(d, entry->key)&d->dt[1].mask;
-			//if have the enetry push.
+			//if have the enetry, push it.
 			entry->next = d->dt[1].entries[idx];
 			d->dt[1].entries[idx] = entry;
 			d->dt[1].used++;
@@ -95,11 +98,14 @@ static int dict_try_expand(dict *d) {
 	return 0;
 }
 
+/**
+ *expand the dict capacity.
+ */
 int dict_expand(dict *d, unsigned int size) {
 	unsigned int realsize;
 	size_t msize;
 	dict_table dt;
-	//can do the epxand operation.
+	//if dict is rehashing or new size less than dict capacity, don't epxand.
 	if(DICT_IS_REHASHING(d) || d->dt[0].size > size)
 		return -1;
 	realsize = _pow_size(size);
@@ -118,6 +124,7 @@ int dict_expand(dict *d, unsigned int size) {
 	return 0;
 }
 
+//find the index of bucket, if key exist return -1.
 static int _dict_key_index(dict *d, const void *key) {
 	int i, idx;
 	dict_entry *entry;
@@ -142,6 +149,7 @@ int dict_add(dict *d, void *key, void *val) {
 	int htidx;
 	int idx;
 	dict_entry *entry;
+	//try to reash, if is rehashing move data from old to new hash table
 	DICT_TRY_REHASH(d);
 	if((idx = _dict_key_index(d, key)) < 0) return -1;
 	htidx = DICT_IS_REHASHING(d)?1:0;
