@@ -49,17 +49,33 @@ cio *cio_create() {
 	io->wbuf = cstr_create(1024);
 	io->wcount = 0;
 	io->priv = NULL;
+	io->flag = 0;
+	io->argc = 0;
+	io->argv = NULL;
 	return io;
 }
 
 void cio_destroy(cio *io) {
+	size_t i;
 	cstr_destroy(io->rbuf);
 	cstr_destroy(io->wbuf);
+	for(i = 0; i < io->argc; i++) {
+		cstr_destroy(io->argv[i]);
+	}
+	if(io->argv != NULL) jfree(io->argv);
 	jfree(io);
 }
 
 void cio_clear(cio *io) {
+	size_t i;
 	cstr_clear(io->rbuf);
 	cstr_clear(io->wbuf);
+	for(i = 0; i < io->argc; i++) {
+		cstr_destroy(io->argv[i]);
+	}
+	if(io->argv != NULL) jfree(io->argv);
+	io->argc = 0;
+	io->argv = NULL;
+	io->flag = 0;
 	io->wcount = 0;
 }

@@ -7,6 +7,8 @@
 #define IO_UN 0x1<<1
 #define IO_UDP 0x1<<2
 
+#define IOF_CLOSE_AFTER_WRITE 0x1
+
 typedef struct {
 	int fd;
 	int type;
@@ -15,6 +17,9 @@ typedef struct {
 	int wcount;
 	char ip[128];
 	int port;
+	int flag;
+	cstr *argv;
+	size_t argc;
 	void *priv;
 } cio;
 

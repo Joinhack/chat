@@ -42,6 +42,7 @@ cstr cstr_ncat(cstr s, char *b, size_t l) {
 	csh = CSTR_HDR(s);
 	memcpy(csh->buff + CSH_USED(csh), b, l);
 	csh->free -= l;
+	s[CSTR_HDR_USED(csh)] = '\0';
 	return (cstr)csh->buff;
 }
 
@@ -55,13 +56,13 @@ cstr* cstr_split(char *s, size_t len, char *b, size_t slen, size_t *l) {
 	cstr *array = NULL;
 	size_t i, j, cap = 0, size = 0, beg = 0;
 	for(i = 0; i < len - slen; i++) {
-		if(size < cap + 1) {
+		if(size + 1 >= cap ) {
 			cap += 5;
-			array = jrealloc(array, cap);
+			array = jrealloc(array, sizeof(cstr)*cap);
 		}
 		if(s[i] == b[0] && memcmp(s + i, b, slen) == 0) {
 			array[size] = cstr_new(s + beg, i - beg);
-			beg = i + slen; 
+			beg = i + slen;
 			size++;
 		}
 	}

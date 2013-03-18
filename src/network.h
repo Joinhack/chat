@@ -3,6 +3,8 @@
 
 #include "cthread.h"
 
+#define MAX_COMMAND_LEN_LIMIT 0x10240
+
 typedef struct {
 	int in_fd;
 	int un_fd;

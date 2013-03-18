@@ -18,10 +18,14 @@ static int write_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
 static int _response(cevents *cevts, cio *io);
 
-static int try_process_command(cio *io);
+static int try_process_command(cevents *cevts, cio *io, int mask);
 
 static void install_read_event(cevents *cevts, cio *io) {
 	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+}
+
+static void set_protocol_error(cio *io) {
+	io->flag |= IOF_CLOSE_AFTER_WRITE;
 }
 
 //always return 0, don't push fired event queue
@@ -64,13 +68,14 @@ int cio_close_destroy(cevents *cevts, int fd, void *priv, int mask) {
 }
 
 static void cio_close_destroy_install(cevents *cevts, cio *io) {
-	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST,cio_close_destroy, io);
-	cevents_del_event(cevts, io->fd, CEV_WRITE);
+	cevents_add_event(cevts, io->fd, CEV_WRITE|CEV_PERSIST,cio_close_destroy, io);
+	cevents_del_event(cevts, io->fd, CEV_READ);
 }
 
 int response(cevents *cevts, cio *io, int mask) {
 	int persist = mask & CEV_PERSIST;
 	int rs = _response(cevts, io);
+
 	//if not use CEV_PERSIST, when the event fired, all events is removed, so should rebind write event.
 	if(!persist && rs == 1) {
 		DEBUG("rebind write event\n");
@@ -78,17 +83,27 @@ int response(cevents *cevts, cio *io, int mask) {
 		return rs;
 	}
 	if(rs < 0) {
+		cio_clear(io);
 		cio_close_destroy_install(cevts, io);
 		return rs;
 	}
+
+	if(io->flag & IOF_CLOSE_AFTER_WRITE) {
+		cio_clear(io);
+		cio_close_destroy_install(cevts, io);
+		return 0;
+	}
+	cio_clear(io);
 
 	//if use CEV_PERSIST, we should disable write event fired.
 	if(persist) {
 		install_read_event(cevts, io);
 		cevents_del_event(cevts, io->fd, CEV_WRITE);
-	} else
+	} else {
 		//read try again for next request. in most cases, it just rebind the read event.
-		return read_event_proc(cevts, io->fd, io, 0);
+		read_event_proc(cevts, io->fd, io, 0);
+		return 0;
+	}
 	return 0;
 }
 
@@ -107,6 +122,7 @@ int reply_str(cevents *cevts, cio *io, int mask, char *buff) {
 }
 
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
+	int rs;
 	cio *io = (cio*)priv;
 	return response(cevts, io, mask);
 }
@@ -124,7 +140,6 @@ int _response(cevents *cevts, cio *io) {
 		}
 		io->wcount += nwrite;
 	}
-	cio_clear(io);
 	return 0;
 }
 
@@ -132,7 +147,7 @@ int process_commond(cevents *cevts, cio *io, int mask) {
 	return reply_str(cevts, io, mask, "+pong\r\n");
 }
 
-int _read_process(cio *io) {
+int _read_process(cevents *cevts, cio *io, int mask) {
 	char buf[2048];
 	int rs, nread;
 	nread = read(io->fd, buf, sizeof(buf));
@@ -146,20 +161,26 @@ int _read_process(cio *io) {
 		return -1;
 	}
 	cstr_ncat(io->rbuf, buf, nread);
-	rs = try_process_command(io);
+	rs = try_process_command(cevts, io, mask);
 	if(rs) return rs;
 	return 0;
 }
 
-static int try_process_command(cio *io) {
+static int try_process_command(cevents *cevts, cio *io, int mask) {
 	size_t nread = cstr_used(io->rbuf);
 	char *end;
 	if(nread <= 0)
 		return -1;
+	if(cstr_used(io->rbuf) > MAX_COMMAND_LEN_LIMIT) {
+		set_protocol_error(io);
+		reply_str(cevts, io, mask, "-ERR reach the max command recv limit\r\n");
+		return -1;
+	}
 	end = strstr(io->rbuf, "\r\n");
 	if(end == NULL) {
 		return 1;
 	}
+	io->argv = cstr_split(io->rbuf, nread, " ", 1, &io->argc);
 	return 0;
 }
 
@@ -167,13 +188,15 @@ static int try_process_command(cio *io) {
 int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
 	int rs, persist = (mask & CEV_PERSIST);
-	rs = _read_process(io);
+	rs = _read_process(cevts, io, mask);
 	if(!persist && rs == 1) {
 		install_read_event(cevts, io);
-		return rs;
+		return 1;
 	}
 	if(rs < 0) {
-		cio_close_destroy_install(cevts, io);
+		//if not after write, will be closed.
+		if(!(io->flag & IOF_CLOSE_AFTER_WRITE))
+			cio_close_destroy_install(cevts, io);
 		return rs;
 	}
 	//if not CEV_PERSIST event, we should process command.

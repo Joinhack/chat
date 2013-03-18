@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <jmalloc.h>
 #include <cstr.h>
 
 int main(int argc, char const *argv[]) {

@@ -46,3 +46,4 @@ db db_create(size_t s) {
 	}
 	db->table_size = s;
 }
+
