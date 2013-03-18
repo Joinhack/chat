@@ -53,16 +53,19 @@ void *jmalloc(size_t s) {
 void *jrealloc(void *ptr, size_t s) {
 	void *new_ptr;
 	uint32_t old_size = 0;
+	uint32_t size = 0;
 #ifndef HAD_MEM_SIZE
 	void *real_ptr = NULL;
 	if(ptr != NULL) {
 		real_ptr = (char*)ptr - MEM_PREFIX_SIZE;
 		old_size = *((uint32_t*)real_ptr);
-	}
+		size = s - old_size;
+	} else
+		size = s + MEM_PREFIX_SIZE;
 	new_ptr = realloc(real_ptr, s);
 	oom_test(new_ptr, s);
 	*((uint32_t*)new_ptr) = s;
-	update_used_mem(s - old_size);
+	update_used_mem(size);
 	return (char*)new_ptr + MEM_PREFIX_SIZE;
 #else
 	old_size = mem_size(ptr);
