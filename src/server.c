@@ -2,14 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include "log.h"
-#include "jmalloc.h"
-#include "code.h"
-#include "cevent.h"
-#include "cnet.h"
-#include "cio.h"
-#include "cthread.h"
-#include "network.h"
+#include "server.h"
 
 int create_tcp_server() {
 	int fd;
@@ -23,11 +16,46 @@ int create_tcp_server() {
 	return fd;
 }
 
+int process_commond(cevents *cevts, cio *io, int mask) {
+	if(strcasecmp(io->argv[0], "quit") == 0) {
+
+	}
+	return reply_str(cevts, io, mask, "+pong\r\n");
+}
+
+void *process_event(void *priv) {
+	int rs;
+	cevents *cevts = (cevents*)priv;
+	cevent_fired fired;
+	cevent *evt;
+	while(1) {
+		if(cevents_pop_fired(cevts, &fired) == 0)
+			return NULL;
+		evt = cevts->events + fired.fd;
+		if(fired.mask & CEV_PERSIST) {
+			process_commond(cevts, (cio*)evt->priv, fired.mask);
+		} else {
+			if(fired.mask & CEV_READ) {
+				evt->read_proc(cevts, fired.fd, evt->priv, fired.mask);
+			}
+			if(fired.mask & CEV_WRITE) {
+				evt->write_proc(cevts, fired.fd, evt->priv, fired.mask);
+			}
+		}
+	}
+	return NULL;
+}
+
+
+
 static void destroy_server(server *svr) {
 }
 
 static server *create_server() {
 	server *svr;
+
+	set_process_command(process_commond);
+
 	svr = jmalloc(sizeof(server));
 	memset(svr, 0, sizeof(server));
 	svr->in_fd = create_tcp_server();

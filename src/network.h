@@ -18,6 +18,8 @@ typedef struct {
 
 int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
-void *process_event(void *priv);
+int reply_str(cevents *cevts, cio *io, int mask,char *buff);
+
+void set_process_command(int (*process_commond)(cevents *cevts, cio *io, int mask));
 
 #endif /*end define network*/

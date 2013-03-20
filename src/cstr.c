@@ -14,7 +14,7 @@ cstr cstr_create(size_t len) {
 	return (cstr)csh->buff;
 }
 
-cstr cstr_new(char *c, size_t len) {
+cstr cstr_new(const char *c, size_t len) {
 	cstr s = cstr_create(len + 1);
 	cstrhdr *csh = (cstrhdr*)s;
 	memcpy(s, c, len);

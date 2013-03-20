@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "jmalloc.h"
 #include "cstr.h"
 #include "obj.h"
@@ -17,6 +18,12 @@ obj* dict_obj_create(dict_opts *opts) {
 	dict *d = dict_create(opts);
 	return obj_create(OBJ_TYPE_DICT, d);
 }
+
+obj* cstr_obj_create(const char *s) {
+	cstr cs = cstr_new(s, strlen(s));
+	obj *o = obj_create(OBJ_TYPE_STR, cs);
+	return o;
+};
 
 void obj_incr(obj *o) {
 	OBJ_LOCK(o);

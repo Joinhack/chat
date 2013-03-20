@@ -12,16 +12,20 @@
 
 static int read_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
-static int reply_str(cevents *cevts, cio *io, int mask,char *buff);
-
 static int write_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
 static int _response(cevents *cevts, cio *io);
 
 static int try_process_command(cevents *cevts, cio *io, int mask);
 
+static int (*process_commond)(cevents *cevts, cio *io, int mask);
+
+void set_process_command(int (*p)(cevents *cevts, cio *io, int mask)) {
+	process_commond = p;
+}
+
 static void install_read_event(cevents *cevts, cio *io) {
-	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
 }
 
 static void set_protocol_error(cio *io) {
@@ -143,10 +147,6 @@ int _response(cevents *cevts, cio *io) {
 	return 0;
 }
 
-int process_commond(cevents *cevts, cio *io, int mask) {
-	return reply_str(cevts, io, mask, "+pong\r\n");
-}
-
 int _read_process(cevents *cevts, cio *io, int mask) {
 	char buf[2048];
 	int rs, nread;
@@ -206,25 +206,4 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	return 0;
 }
 
-void *process_event(void *priv) {
-	int rs;
-	cevents *cevts = (cevents*)priv;
-	cevent_fired fired;
-	cevent *evt;
-	while(1) {
-		if(cevents_pop_fired(cevts, &fired) == 0)
-			return NULL;
-		evt = cevts->events + fired.fd;
-		if(fired.mask & CEV_PERSIST) {
-			process_commond(cevts, (cio*)evt->priv, fired.mask);
-		} else {
-			if(fired.mask & CEV_READ) {
-				evt->read_proc(cevts, fired.fd, evt->priv, fired.mask);
-			}
-			if(fired.mask & CEV_WRITE) {
-				evt->write_proc(cevts, fired.fd, evt->priv, fired.mask);
-			}
-		}
-	}
-	return NULL;
-}
+
