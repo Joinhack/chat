@@ -12,6 +12,7 @@
 typedef struct {
 	int fd;
 	int type;
+	int mask;
 	cstr rbuf;
 	cstr wbuf;
 	int wcount;

@@ -2,6 +2,7 @@
 #define NETWORK_H
 
 #include "cthread.h"
+#include "obj.h"
 
 #define MAX_COMMAND_LEN_LIMIT 0x10240
 
@@ -18,8 +19,16 @@ typedef struct {
 
 int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
-int reply_str(cevents *cevts, cio *io, int mask,char *buff);
+int reply_str(cevents *cevts, cio *io, char *buff);
 
-void set_process_command(int (*process_commond)(cevents *cevts, cio *io, int mask));
+int reply_obj(cevents *cevts, cio *io, obj *obj);
+
+int reply_cstr(cevents *cevts, cio *io, cstr s);
+
+int process_commond(cevents *cevts, cio *io);
+
+void shared_obj_create();
+
+void *process_event(void *priv);
 
 #endif /*end define network*/

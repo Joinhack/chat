@@ -24,6 +24,8 @@ void obj_decr(obj *o);
 
 obj* dict_obj_create(dict_opts *opts);
 
+obj* cstr_obj_create(const char *s);
+
 #define OBJ_LOCK(o) LOCK(&o->lock)
 
 #define OBJ_UNLOCK(o) UNLOCK(&o->lock)

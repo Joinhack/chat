@@ -16,7 +16,7 @@ cstr cstr_create(size_t len) {
 
 cstr cstr_new(const char *c, size_t len) {
 	cstr s = cstr_create(len + 1);
-	cstrhdr *csh = (cstrhdr*)s;
+	cstrhdr *csh = CSTR_HDR(s);
 	memcpy(s, c, len);
 	s[len] = '\0';
 	csh->free = 0;

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include "atomic.h"
 #include "jmalloc.h"
 #include "cevent.h"
 #include "cnet.h"
@@ -16,19 +17,63 @@ static int write_event_proc(cevents *cevts, int fd, void *priv, int mask);
 
 static int _response(cevents *cevts, cio *io);
 
-static int try_process_command(cevents *cevts, cio *io, int mask);
+static int try_process_command(cevents *cevts, cio *io);
 
-static int (*process_commond)(cevents *cevts, cio *io, int mask);
+struct shared_obj {
+	obj *err;
+	obj *pong;
+	obj *ok;
+};
 
-void set_process_command(int (*p)(cevents *cevts, cio *io, int mask)) {
-	process_commond = p;
+static struct shared_obj shared;
+
+typedef void (*cmd)(cevents *cevts, cio *io);
+
+void shared_obj_create() {
+	shared.err = cstr_obj_create("-ERR\r\n");
+	shared.pong = cstr_obj_create("+PONG\r\n");
+	shared.ok = cstr_obj_create("+OK\r\n");
+}
+
+int process_commond(cevents *cevts, cio *io) {
+	if(strcasecmp(io->argv[0], "quit") == 0) {
+		io->flag |= IOF_CLOSE_AFTER_WRITE;
+		reply_obj(cevts, io, shared.ok);
+		return 0;
+	}
+	return reply_obj(cevts, io, shared.pong);
+}
+
+void *process_event(void *priv) {
+	int rs;
+	cevents *cevts = (cevents*)priv;
+	cevent_fired fired;
+	cevent *evt;
+	while(1) {
+		if(cevents_pop_fired(cevts, &fired) == 0)
+			return NULL;
+		evt = cevts->events + fired.fd;
+		if(fired.mask & CEV_PERSIST) {
+			cio *io = (cio*)evt->priv;
+			io->mask = fired.mask;
+			process_commond(cevts, io);
+		} else {
+			if(fired.mask & CEV_READ) {
+				evt->read_proc(cevts, fired.fd, evt->priv, fired.mask);
+			}
+			if(fired.mask & CEV_WRITE) {
+				evt->write_proc(cevts, fired.fd, evt->priv, fired.mask);
+			}
+		}
+	}
+	return NULL;
 }
 
 static void install_read_event(cevents *cevts, cio *io) {
 	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
 }
 
-static void set_protocol_error(cio *io) {
+void set_protocol_error(cio *io) {
 	io->flag |= IOF_CLOSE_AFTER_WRITE;
 }
 
@@ -76,8 +121,8 @@ static void cio_close_destroy_install(cevents *cevts, cio *io) {
 	cevents_del_event(cevts, io->fd, CEV_READ);
 }
 
-int response(cevents *cevts, cio *io, int mask) {
-	int persist = mask & CEV_PERSIST;
+int response(cevents *cevts, cio *io) {
+	int persist = io->mask & CEV_PERSIST;
 	int rs = _response(cevts, io);
 
 	//if not use CEV_PERSIST, when the event fired, all events is removed, so should rebind write event.
@@ -111,24 +156,45 @@ int response(cevents *cevts, cio *io, int mask) {
 	return 0;
 }
 
-int reply_str(cevents *cevts, cio *io, int mask, char *buff) {
+static int _reply(cevents *cevts, cio *io) {
 	int rs;
-	io->wcount = 0;
-	cstr_ncat(io->wbuf, buff, strlen(buff));
 	//if not persist we direct to reponse the result, else use main thread for io.
-	if(!(mask & CEV_PERSIST)) {
-		rs = response(cevts, io, mask);
+	if(!(io->mask & CEV_PERSIST)) {
+		rs = response(cevts, io);
 		if(rs) return rs;
 	} else {
 		cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
 	}
+}
+
+int reply_str(cevents *cevts, cio *io, char *buff) {
+	io->wcount = 0;
+	cstr_ncat(io->wbuf, buff, strlen(buff));
+	_reply(cevts, io);
 	return 0;
+}
+
+int reply_obj(cevents *cevts, cio *io, obj *obj) {
+	io->wcount = 0;
+	if(obj->type == OBJ_TYPE_STR) {
+		cstr s = (cstr)obj->priv;
+		OBJ_LOCK(obj);
+		cstr_ncat(io->wbuf, s, strlen(s));
+		OBJ_UNLOCK(obj);
+		_reply(cevts, io);
+	}
+}
+
+int reply_cstr(cevents *cevts, cio *io, cstr s) {
+	cstr_ncat(io->wbuf, s, strlen(s));
+	_reply(cevts, io);
 }
 
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int rs;
 	cio *io = (cio*)priv;
-	return response(cevts, io, mask);
+	io->mask = mask;
+	return response(cevts, io);
 }
 
 int _response(cevents *cevts, cio *io) {
@@ -147,7 +213,7 @@ int _response(cevents *cevts, cio *io) {
 	return 0;
 }
 
-int _read_process(cevents *cevts, cio *io, int mask) {
+int _read_process(cevents *cevts, cio *io) {
 	char buf[2048];
 	int rs, nread;
 	nread = read(io->fd, buf, sizeof(buf));
@@ -161,19 +227,20 @@ int _read_process(cevents *cevts, cio *io, int mask) {
 		return -1;
 	}
 	cstr_ncat(io->rbuf, buf, nread);
-	rs = try_process_command(cevts, io, mask);
+	rs = try_process_command(cevts, io);
 	if(rs) return rs;
 	return 0;
 }
 
-static int try_process_command(cevents *cevts, cio *io, int mask) {
+static int try_process_command(cevents *cevts, cio *io) {
 	size_t nread = cstr_used(io->rbuf);
+	cstr s;
 	char *end;
 	if(nread <= 0)
 		return -1;
 	if(cstr_used(io->rbuf) > MAX_COMMAND_LEN_LIMIT) {
 		set_protocol_error(io);
-		reply_str(cevts, io, mask, "-ERR reach the max command recv limit\r\n");
+		reply_str(cevts, io, "-ERR reach the max command recv limit\r\n");
 		return -1;
 	}
 	end = strstr(io->rbuf, "\r\n");
@@ -181,6 +248,10 @@ static int try_process_command(cevents *cevts, cio *io, int mask) {
 		return 1;
 	}
 	io->argv = cstr_split(io->rbuf, nread, " ", 1, &io->argc);
+	s = io->argv[io->argc - 1];
+	//last already is 0
+	s[cstr_used(s) - 2] = 0;
+	s[cstr_used(s) - 3] = 0;
 	return 0;
 }
 
@@ -188,7 +259,8 @@ static int try_process_command(cevents *cevts, cio *io, int mask) {
 int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
 	int rs, persist = (mask & CEV_PERSIST);
-	rs = _read_process(cevts, io, mask);
+	io->mask = mask;
+	rs = _read_process(cevts, io);
 	if(!persist && rs == 1) {
 		install_read_event(cevts, io);
 		return 1;
@@ -201,7 +273,8 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	}
 	//if not CEV_PERSIST event, we should process command.
 	if(!persist) {
-		process_commond(cevts, io, mask);
+		io->mask = mask;
+		process_commond(cevts, io);
 	}
 	return 0;
 }

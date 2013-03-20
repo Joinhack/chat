@@ -74,6 +74,7 @@ void cio_clear(cio *io) {
 		cstr_destroy(io->argv[i]);
 	}
 	if(io->argv != NULL) jfree(io->argv);
+	io->mask = 0;
 	io->argc = 0;
 	io->argv = NULL;
 	io->flag = 0;
