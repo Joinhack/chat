@@ -4,6 +4,55 @@
 #include <unistd.h>
 #include "server.h"
 
+struct shared_obj {
+	obj *err;
+	obj *pong;
+	obj *ok;
+};
+
+static struct shared_obj shared;
+
+typedef void (*cmd)(cevents *cevts, cio *io);
+
+void shared_obj_create() {
+	shared.err = cstr_obj_create("-ERR\r\n");
+	shared.pong = cstr_obj_create("+PONG\r\n");
+	shared.ok = cstr_obj_create("+OK\r\n");
+}
+
+int process_commond(cio *io) {
+	if(strcasecmp(io->argv[0], "quit") == 0) {
+		io->flag |= IOF_CLOSE_AFTER_WRITE;
+		reply_obj(io, shared.ok);
+		return 0;
+	}
+	return reply_obj(io, shared.pong);
+}
+
+void *process_event(void *priv) {
+	int rs;
+	cevents *cevts = (cevents*)priv;
+	cevent_fired fired;
+	cevent *evt;
+	while(1) {
+		if(cevents_pop_fired(cevts, &fired) == 0)
+			return NULL;
+		evt = cevts->events + fired.fd;
+		if(fired.mask & CEV_PERSIST) {
+			cio *io = (cio*)evt->priv;
+			io->mask = fired.mask;
+			process_commond(io);
+		} else {
+			if(fired.mask & CEV_READ) {
+				evt->read_proc(cevts, fired.fd, evt->priv, fired.mask);
+			}
+			if(fired.mask & CEV_WRITE) {
+				evt->write_proc(cevts, fired.fd, evt->priv, fired.mask);
+			}
+		}
+	}
+	return NULL;
+}
 
 int create_tcp_server() {
 	int fd;
