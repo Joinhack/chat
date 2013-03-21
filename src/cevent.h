@@ -2,7 +2,7 @@
 #define CEVENT_H
 
 #include "common.h"
-#include "cqueue.h"
+#include "clist.h"
 #include "lock.h"
 
 #define MAX_EVENTS (10240*20)
@@ -32,7 +32,7 @@ struct cevents {
 	int maxfd;
 	cevent *events; //should be MAX_EVENTS
 	cevent_fired *fired; //should be MAX_EVENTS, push to top level
-	cqueue *fired_queue;
+	clist *fired_queue;
 	LOCK_T qlock;
 	LOCK_T lock;
 	long poll_sec;

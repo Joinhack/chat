@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <cqueue.h>
+#include <clist.h>
 #include <pthread.h>
 #include <spinlock.h>
 
@@ -8,7 +8,7 @@
 
 uint32_t count;
 
-cqueue *cq;
+clist *cl;
 spinlock_t lock;
 
 void *cqueue_pop_mt(void *data) {
@@ -16,8 +16,8 @@ void *cqueue_pop_mt(void *data) {
 	while(1) {
 		spinlock_lock(&lock);
 		count++;
-		fprintf(stdout, "%lu pop %lu\n", (long)pthread_self(), cqueue_len(cq));
-		cqueue_pop(cq);
+		fprintf(stdout, "%lu pop %lu\n", (long)pthread_self(), clist_len(cl));
+		clist_rpop(cl);
 		spinlock_unlock(&lock);
 	}
 	
@@ -31,25 +31,25 @@ int compare(void *data, void *priv) {
 int main(int argc, char const *argv[]) {
 	size_t i;
 	lock = SL_UNLOCK;
-	cq = cqueue_create();
+	cl = clist_create();
 	count = 0;
-	cqueue_item *cqi;
+	clist_item *cqi;
 	for(i = 0; i < 6; i++)
-		cqueue_push(cq, NULL);
-	cqi = cq->head;
+		clist_lpush(cl, NULL);
+	cqi = cl->head;
 
-	cqueue_pop(cq);
-	cqueue_pop(cq);
-	cqueue_pop(cq);
-	cqueue_pop(cq);
-	cqueue_pop(cq);
-	cqueue_pop(cq);
+	clist_rpop(cl);
+	clist_rpop(cl);
+	clist_rpop(cl);
+	clist_rpop(cl);
+	clist_rpop(cl);
+	clist_rpop(cl);
 
 	for(i = 0; i < 6; i++)
-		cqueue_push(cq, NULL);
-	cqueue_walk_remove(cq, compare, NULL);
-	printf("%lu\n", cqueue_len(cq));
-	cqueue_destroy(cq);
+		clist_lpush(cl, NULL);
+	clist_walk_remove(cl, compare, NULL);
+	printf("%lu\n", clist_len(cl));
+	clist_destroy(cl);
 	return 0;
 }
 

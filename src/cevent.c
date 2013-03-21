@@ -27,14 +27,14 @@ static int cevents_disable_event_impl(cevents *cevts, int fd, int mask);
 
 void cevents_push_fired(cevents *cevts, cevent_fired *fired) {
 	LOCK(&cevts->qlock);
-	cqueue_push(cevts->fired_queue, (void*)fired);
+	clist_lpush(cevts->fired_queue, (void*)fired);
 	UNLOCK(&cevts->qlock);
 }
 
 int cevents_pop_fired(cevents *cevts, cevent_fired *fired) {
 	cevent_fired *fevt;
 	LOCK(&cevts->qlock);
-	fevt = (cevent_fired*)cqueue_pop(cevts->fired_queue);
+	fevt = (cevent_fired*)clist_rpop(cevts->fired_queue);
 	UNLOCK(&cevts->qlock);
 	if(fevt == NULL) return 0;
 	*fired = *fevt;
@@ -50,7 +50,7 @@ cevents *cevents_create() {
 	memset((void *)evts, len, 0);
 	evts->events = jmalloc(sizeof(cevent) * MAX_EVENTS);
 	evts->fired = jmalloc(sizeof(cevent_fired) * MAX_EVENTS);
-	evts->fired_queue = cqueue_create();
+	evts->fired_queue = clist_create();
 	LOCK_INIT(&evts->qlock);
 	LOCK_INIT(&evts->lock);
 	cevents_create_priv_impl(evts);
@@ -67,7 +67,7 @@ void cevents_destroy(cevents *cevts) {
 	if(cevts->fired != NULL)
 		jfree(cevts->fired);
 	if(cevts->fired_queue != NULL)
-		cqueue_destroy(cevts->fired_queue);
+		clist_destroy(cevts->fired_queue);
 	LOCK_DESTROY(&cevts->lock);
 	LOCK_DESTROY(&cevts->qlock);
 	cevts->events = NULL;

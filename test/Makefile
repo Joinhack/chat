@@ -2,7 +2,7 @@ CC = gcc
 INC = ../src
 OPTS = -g
 
-TARGS=cstr_test cnet_test cthread_test jmalloc_test cqueue_test dict_test 
+TARGS=cstr_test cnet_test cthread_test jmalloc_test clist_test dict_test 
 
 
 all: $(TARGS)
@@ -19,8 +19,8 @@ jmalloc_test:
 cthread_test:
 	$(CC) -o cthread_test  cthread_test.c ../src/cthread.c ../src/cqueue.c ../src/spinlock.c ../src/jmalloc.c -I$(INC) $(OPTS) -lpthread 
 
-cqueue_test:
-	$(CC) -o cqueue_test cqueue_test.c  ../src/cthread.c ../src/cqueue.c ../src/spinlock.c ../src/jmalloc.c -I$(INC) $(OPTS) -lpthread 
+clist_test:
+	$(CC) -o clist_test clist_test.c  ../src/cthread.c ../src/clist.c ../src/spinlock.c ../src/jmalloc.c -I$(INC) $(OPTS) -lpthread 
 
 dict_test:
 	$(CC) -o dict_test dict_test.c  ../src/dict.c ../src/cstr.c ../src/jmalloc.c -I$(INC)  $(OPTS)

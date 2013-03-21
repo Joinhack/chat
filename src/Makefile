@@ -12,5 +12,5 @@ clean:
 	rm -rf *.o
 	rm -rf server
 
-server: server.o cnet.o cqueue.o cevent.o jmalloc.o cio.o network.o spinlock.o cthread.o cstr.o log.o common.o dict.o db.o obj.o
+server: server.o cnet.o clist.o cevent.o jmalloc.o cio.o network.o spinlock.o cthread.o cstr.o log.o common.o dict.o db.o obj.o
 	$(CC) -o server $^ $(OPTS) 
