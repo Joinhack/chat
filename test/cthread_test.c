@@ -3,12 +3,12 @@
 #include <string.h>
 #include <errno.h>
 #include <spinlock.h>
-#include <cqueue.h>
+#include <clist.h>
 #include <cthread.h>
 
 
 typedef struct {
-	cqueue *cq;
+	clist *cq;
 	spinlock_t lock;
 } data;
 
@@ -16,9 +16,9 @@ void *print_test(void *d) {
 	data *datap = (data*)d;
 	while(1) {
 		spinlock_lock(&datap->lock);
-		cqueue_pop(datap->cq);	
+		clist_rpop(datap->cq);	
 		spinlock_unlock(&datap->lock);
-		if(cqueue_len(datap->cq) == 0)
+		if(clist_len(datap->cq) == 0)
 			break;
 	}
 	return NULL;
@@ -27,14 +27,14 @@ void *print_test(void *d) {
 int main(int argc, char const *argv[]) {
 	int i, ret;
 	data data;
-	data.cq = cqueue_create();
+	data.cq = clist_create();
 	data.lock = SL_UNLOCK;
 	cthr_pool *pool = cthr_pool_create(20); 
 
 	for(;;) {
 		for(i = 0; i < 10; i++){
 			spinlock_lock(&data.lock);
-			cqueue_push(data.cq, NULL);
+			clist_lpush(data.cq, NULL);
 			spinlock_unlock(&data.lock);
 		}
 		cthr_pool_run_task(pool, print_test, &data);

@@ -29,6 +29,17 @@ clist *clist_create() {
 	return cl;
 }
 
+
+#define POP(cl, item) \
+if(--cl->count) { \
+	item->prev->next = item->next; \
+	item->next->prev = item->prev; \
+} else { \
+	cl->head = NULL; \
+} \
+clist_item_destroy(item)
+
+
 void *clist_rpop(clist *cl) {
 	void *data;
 	clist_item *item;
@@ -37,13 +48,20 @@ void *clist_rpop(clist *cl) {
 	}
 	item = cl->head->prev;
 	data = item->data;
-	if(--cl->count) {
-		item->prev->next = item->next;
-		item->next->prev = item->prev;
-	} else {
-		cl->head = NULL;
+	POP(cl, item);
+	return data;
+}
+
+void *clist_lpop(clist *cl) {
+	void *data;
+	clist_item *item;
+	if(cl->count == 0) {
+		return NULL;
 	}
-	clist_item_destroy(item);
+	item = cl->head;
+	data = item->data;
+	cl->head = item->next;
+	POP(cl, item);
 	return data;
 }
 
@@ -51,7 +69,7 @@ int clist_walk_remove(clist *cl, int (*cb)(void *, void *priv), void *priv) {
 	int count = 0;
 	clist_item *item, *next;
 	item = cl->head;
-	while(item != NULL) {
+	while(item != NULL || cl->count != count) {
 		if(!cb(item->data, priv)) {
 			next = item->next;
 			if(--cl->count) {
@@ -87,8 +105,27 @@ void clist_lpush(clist *cl, void *data) {
 	} else {
 		item->prev = item;
 		item->next = item;
+		cl->head = item;
 	}
-	cl->head = item;
+	cl->count++;
+}
+
+void clist_rpush(clist *cl, void *data) {
+	clist_item *item, *hprev;
+	item = clist_item_create();
+	item->data = data;
+	if(cl->head != NULL) {
+		hprev = cl->head->prev;
+		item->prev = hprev;
+		item->next = cl->head;
+		hprev->next = item;
+		cl->head->prev = item;
+	} else {
+		item->prev = item;
+		item->next = item;
+		cl->head = item;
+	}
+	
 	cl->count++;
 }
 

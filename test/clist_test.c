@@ -47,9 +47,26 @@ int main(int argc, char const *argv[]) {
 
 	for(i = 0; i < 6; i++)
 		clist_lpush(cl, NULL);
-	clist_walk_remove(cl, compare, NULL);
 	printf("%lu\n", clist_len(cl));
 	clist_destroy(cl);
+
+	cl = clist_create();
+	for(i = 0; i < 1000; i++)
+		clist_rpush(cl, NULL);
+	for(i = 0; i < 1000; i++)
+		clist_lpush(cl, NULL);
+	printf("%lu\n", clist_len(cl));
+
+	for(i = 0; i < 1000; i++)
+		clist_lpop(cl);
+
+	for(i = 0; i < 1000; i++)
+		clist_rpop(cl);
+
+	printf("%lu\n", clist_len(cl));
+
+	clist_destroy(cl);
+
 	return 0;
 }
 

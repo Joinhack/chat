@@ -17,7 +17,7 @@ jmalloc_test:
 	$(CC) -o jmalloc_test jmalloc_test.c -lpthread -DTHREAD_TEST ../src/jmalloc.c -I$(INC) 
 
 cthread_test:
-	$(CC) -o cthread_test  cthread_test.c ../src/cthread.c ../src/cqueue.c ../src/spinlock.c ../src/jmalloc.c -I$(INC) $(OPTS) -lpthread 
+	$(CC) -o cthread_test  cthread_test.c ../src/cthread.c ../src/clist.c ../src/spinlock.c ../src/jmalloc.c -I$(INC) $(OPTS) -lpthread 
 
 clist_test:
 	$(CC) -o clist_test clist_test.c  ../src/cthread.c ../src/clist.c ../src/spinlock.c ../src/jmalloc.c -I$(INC) $(OPTS) -lpthread 
