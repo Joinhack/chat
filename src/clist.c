@@ -92,21 +92,25 @@ int clist_walk_remove(clist *cl, int (*cb)(void *, void *priv), void *priv) {
 	return count;
 }
 
+#define PUSH(cl, item) \
+if(cl->head != NULL) { \
+	hprev = cl->head->prev; \
+	item->next = cl->head; \
+	item->prev = hprev; \
+	cl->head->prev = item; \
+	hprev->next = item; \
+} else { \
+	item->prev = item; \
+	item->next = item; \
+	cl->head = item; \
+}
+
 void clist_lpush(clist *cl, void *data) {
 	clist_item *item, *hprev;
 	item = clist_item_create();
 	item->data = data;
-	if(cl->head != NULL) {
-		hprev = cl->head->prev;
-		item->next = cl->head;
-		item->prev = cl->head->prev;
-		cl->head->prev = item;
-		hprev->next = item;
-	} else {
-		item->prev = item;
-		item->next = item;
-		cl->head = item;
-	}
+	PUSH(cl, item);
+	cl->head = item;
 	cl->count++;
 }
 
@@ -114,18 +118,7 @@ void clist_rpush(clist *cl, void *data) {
 	clist_item *item, *hprev;
 	item = clist_item_create();
 	item->data = data;
-	if(cl->head != NULL) {
-		hprev = cl->head->prev;
-		item->prev = hprev;
-		item->next = cl->head;
-		hprev->next = item;
-		cl->head->prev = item;
-	} else {
-		item->prev = item;
-		item->next = item;
-		cl->head = item;
-	}
-	
+	PUSH(cl, item);
 	cl->count++;
 }
 
