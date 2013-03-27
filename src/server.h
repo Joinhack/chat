@@ -19,9 +19,10 @@ typedef struct {
 	uint32_t connections;
 	long last_info_time;
 	cevents *evts;
+	dict *commands;
 	cthr_pool *thr_pool;
 } server;
 
-
+void pong(cio *io);
 
 #endif /**end define server*/

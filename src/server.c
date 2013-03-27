@@ -8,11 +8,58 @@ struct shared_obj {
 	obj *err;
 	obj *pong;
 	obj *ok;
+	obj *cmd;
 };
 
 static struct shared_obj shared;
 
-typedef void (*cmd)(cevents *cevts, cio *io);
+typedef void (*cmd_call)(cio *io);
+
+static unsigned int hash(const void *key) {
+	return dict_generic_hash((char*)key, strlen((char*)key));
+}
+
+int command_key_compare(const void *k1, const void *k2) {
+	size_t len;
+	cstr s1 = (cstr)k1;
+	cstr s2 = (cstr)k2;
+	len = cstr_len(s1);
+	if(len != cstr_len(s2))
+		return 1;
+	return memcmp(k1, k2, len);
+}
+
+dict_opts command_opts = {
+	.hash = hash,
+	NULL,
+	NULL,
+	command_key_compare,
+	NULL,
+	NULL,
+};
+
+struct command {
+	char *name;
+	cmd_call call;
+	int argc;
+};
+
+struct command commands[] = {
+	{"ping", pong, 1},
+};
+
+void pong(cio *io) {
+	reply_obj(io, shared.pong);
+}
+
+static void regist_commands(server *svr) {
+	size_t i;
+	struct command *cmd;
+	for(i = 0; i < sizeof(commands)/sizeof(struct command); i++) {
+		cmd = &commands[i];
+		dict_add(svr->commands, cmd->name, cmd);
+	}
+}
 
 void shared_obj_create() {
 	shared.err = cstr_obj_create("-ERR\r\n");
@@ -21,12 +68,30 @@ void shared_obj_create() {
 }
 
 int process_commond(cio *io) {
+	char buf[1024];
+	server *svr = (server*)io->priv;
+	dict_entry *cmd_entry;
+	struct command *cmd;
 	if(strcasecmp(io->argv[0], "quit") == 0) {
 		io->flag |= IOF_CLOSE_AFTER_WRITE;
 		reply_obj(io, shared.ok);
 		return 0;
 	}
-	return reply_obj(io, shared.pong);
+	memset(buf, 0, sizeof(buf));
+	cmd_entry = dict_find(svr->commands, io->argv[0]);
+	if(cmd_entry != NULL) {
+		cmd = (struct command*)cmd_entry->value;
+		if(cmd->argc >= 0) {
+			if(cmd->argc != io->argc) {
+				snprintf(buf,sizeof(buf), "-ERR wrong number arguments for command '%s'\r\n", io->argv[0]);
+				return reply_str(io, buf);
+			}
+		}
+		cmd->call(io);
+		return 0;
+	}
+	snprintf(buf,sizeof(buf), "-ERR unknown command '%s'\r\n", io->argv[0]);
+	return reply_str(io, buf);
 }
 
 void *process_event(void *priv) {
@@ -85,6 +150,9 @@ static server *create_server() {
 	}
 	svr->logfd = fileno(stdout);
 	log_init(svr->logfd);
+
+	svr->commands = dict_create(&command_opts);
+	regist_commands(svr);
 
 	//TODO: set size from config
 	svr->thr_pool = cthr_pool_create(10);

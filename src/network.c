@@ -181,6 +181,11 @@ int _read_process(cio *io) {
 	return 0;
 }
 
+static int try_process_multibluk_command(cio *io) {
+	reply_str(io, "-ERR \r\n");
+	return 1;
+}
+
 static int try_process_command(cio *io) {
 	size_t nread = cstr_used(io->rbuf);
 	cstr s;
@@ -196,6 +201,8 @@ static int try_process_command(cio *io) {
 	if(end == NULL) {
 		return 1;
 	}
+	if(io->rbuf[0] == '*')
+		return try_process_multibluk_command(io);
 	io->argv = cstr_split(io->rbuf, nread, " ", 1, &io->argc);
 	s = io->argv[io->argc - 1];
 	//last already is 0
@@ -225,7 +232,7 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		io->mask = mask;
 		process_commond(io);
 	}
-	return 0;
+	return rs;
 }
 
 
