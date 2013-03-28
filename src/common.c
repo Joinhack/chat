@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <limits.h>
+#include <string.h>
 #include <sys/time.h>
 #include "common.h"
 
@@ -40,3 +41,41 @@ int str2ll(char *p, size_t len, long long *l) {
 	}
 	return 0;
 }
+
+int str2l(char *p, size_t len, long *l) {
+	int rs;
+	long long ll;
+	rs = str2ll(p, len, &ll);
+	if(rs < 0) return rs;
+	if(ll > (long long)LONG_MAX) return -1;
+	if(ll < (long long)LONG_MIN) return -1;
+	*l = ll;
+	return 0;
+}
+
+int ll2str(long long l, char *p, size_t size) {
+	char *ptr, buf[64];
+	int len = 0, bs, offset;
+	unsigned long long ll;
+	bs = sizeof(buf);
+	memset(buf, 0, bs);
+	ptr = buf + bs;
+	ll = l < 0?-l:l;
+	while(ll) {
+		*(--ptr) = '0' + ll%10;
+		ll /= 10;
+	}
+	offset = (buf + bs) - ptr;
+	len =  offset;
+	if(l < 0) {
+		if(offset > size - 1) return -1;	
+		p[0] = '-';
+		p++;
+		len++;
+	} else {
+		if(offset > size) return -1;	
+	}
+	memcpy(p, ptr, offset);
+	return len;
+}
+

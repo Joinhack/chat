@@ -23,4 +23,8 @@ void time_now(long *s, int *ms);
 
 int str2ll(char *p, size_t len, long long *l);
 
+int ll2str(long long l, char *p, size_t len);
+
+int str2l(char *p, size_t len, long *l);
+
 #endif /*end define common head*/
