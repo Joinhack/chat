@@ -182,6 +182,9 @@ int _read_process(cio *io) {
 }
 
 static int try_process_multibluk_command(cio *io) {
+	char *ptr;
+	ptr = strstr(io->rbuf, "\r\n");
+	
 	reply_str(io, "-ERR \r\n");
 	return 1;
 }
@@ -192,17 +195,21 @@ static int try_process_command(cio *io) {
 	char *end;
 	if(nread <= 0)
 		return -1;
+
 	if(cstr_used(io->rbuf) > MAX_COMMAND_LEN_LIMIT) {
 		set_protocol_error(io);
 		reply_str(io, "-ERR reach the max command recv limit\r\n");
 		return -1;
 	}
+
+	if(io->rbuf[0] == '*')
+		return try_process_multibluk_command(io);
+	
+
 	end = strstr(io->rbuf, "\r\n");
 	if(end == NULL) {
 		return 1;
 	}
-	if(io->rbuf[0] == '*')
-		return try_process_multibluk_command(io);
 	io->argv = cstr_split(io->rbuf, nread, " ", 1, &io->argc);
 	s = io->argv[io->argc - 1];
 	//last already is 0

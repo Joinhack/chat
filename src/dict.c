@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "jmalloc.h"
 #include "dict.h"
 
 #define DICT_TRY_REHASH(d) if(DICT_IS_REHASHING(d)) dict_rehash(d, 1)
-#define INT_MAX ((int)(~0U>>1))
 
 static unsigned int _pow_size(unsigned int size) {
 	unsigned int s = DICT_INIT_SIZE;

@@ -21,4 +21,6 @@ typedef uint64_t msec_t;
 
 void time_now(long *s, int *ms);
 
+int str2ll(char *p, size_t len, long long *l);
+
 #endif /*end define common head*/
