@@ -51,6 +51,9 @@ cio *cio_create() {
 	io->priv = NULL;
 	io->flag = 0;
 	io->argc = 0;
+	io->bulk_len = 0;
+	io->nbulk = 0;
+	io->reqtype = REQ_TYPE_NORMAL;
 	io->argv = NULL;
 	return io;
 }
@@ -75,7 +78,10 @@ void cio_clear(cio *io) {
 	}
 	if(io->argv != NULL) jfree(io->argv);
 	io->mask = 0;
+	io->reqtype = REQ_TYPE_NORMAL;
 	io->argc = 0;
+	io->nbulk = 0;
+	io->bulk_len = 0;
 	io->argv = NULL;
 	io->flag = 0;
 	io->wcount = 0;

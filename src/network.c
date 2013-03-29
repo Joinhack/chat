@@ -177,16 +177,81 @@ int _read_process(cio *io) {
 	}
 	cstr_ncat(io->rbuf, buf, nread);
 	rs = try_process_command(io);
-	if(rs) return rs;
-	return 0;
+	return rs;
 }
 
 static int try_process_multibluk_command(cio *io) {
 	char *ptr;
-	ptr = strstr(io->rbuf, "\r\n");
-	
-	reply_str(io, "-ERR \r\n");
-	return 1;
+	int ret = 0;
+	long long len;
+	size_t nread = cstr_used(io->rbuf), pos = 0;
+	if(io->nbulk == 0) {
+		if(io->rbuf[0] != '*') {
+			set_protocol_error(io);
+			reply_str(io, "-ERR: unknown protocol\r\n");
+			return -1;
+		} 
+		ptr = strstr(io->rbuf, "\r\n");
+		if(ptr == NULL) {
+			if(nread > MAX_COMMAND_LEN_LIMIT) {
+				set_protocol_error(io);
+				reply_str(io, "-ERR reach the max command recv limit\r\n");
+				return -1;
+			}
+			return 1;
+		}
+		if(str2ll(io->rbuf + 1, ptr - io->rbuf - 1, &len) < 0 || (len > 1024 || len <= 0)) {
+			set_protocol_error(io);
+			reply_str(io, "-ERR: error number of bulk \r\n");
+			return -1;
+		}
+		pos += ptr - io->rbuf + 2;
+		io->nbulk = len;
+		io->argc = 0;
+		if(io->argv) jfree(io->argv);
+		io->argv = jmalloc(io->nbulk*sizeof(cstr));
+	}
+	while(io->nbulk) {
+		if(io->bulk_len == 0) {
+			ptr = strstr(io->rbuf + pos, "\r\n");
+			if(ptr == NULL) {
+				if(nread > MAX_COMMAND_LEN_LIMIT) {
+					set_protocol_error(io);
+					reply_str(io, "-ERR reach the max command recv limit\r\n");
+					return -1;
+				}
+				//need more data
+				ret = 1;
+				break;
+			} else {
+				if(io->rbuf[pos] != '$') {
+					set_protocol_error(io);
+					reply_str(io, "-ERR unknow protocol\r\n");
+					return -1;
+				}
+				if(str2ll(io->rbuf + pos + 1, ptr - (io->rbuf + pos) - 1, &len) < 0 || (len > 1024*1024 || len <= 0)) {
+					set_protocol_error(io);
+					reply_str(io, "-ERR: error bulk length \r\n");
+					return -1;
+				}
+				io->bulk_len = len;
+				pos += ptr - (io->rbuf + pos) + 2;
+			}
+		}
+		if(nread - pos < io->bulk_len + 2) {
+			// read more data for bulk.
+			ret = 1;
+			break;
+		}
+
+		io->argv[io->argc++] = cstr_new(io->rbuf + pos, io->bulk_len);
+		pos += io->bulk_len + 2;
+		io->bulk_len = 0;
+		io->nbulk--;
+	}
+	if(ret)
+		cstr_range(io->rbuf, pos + io->bulk_len, -1);
+	return ret;
 }
 
 static int try_process_command(cio *io) {
@@ -196,16 +261,17 @@ static int try_process_command(cio *io) {
 	if(nread <= 0)
 		return -1;
 
+	if(io->reqtype || io->rbuf[0] == '*') {
+		io->reqtype = REQ_TYPE_MBULK;
+		return try_process_multibluk_command(io);
+	}
+
 	if(cstr_used(io->rbuf) > MAX_COMMAND_LEN_LIMIT) {
 		set_protocol_error(io);
 		reply_str(io, "-ERR reach the max command recv limit\r\n");
 		return -1;
 	}
-
-	if(io->rbuf[0] == '*')
-		return try_process_multibluk_command(io);
 	
-
 	end = strstr(io->rbuf, "\r\n");
 	if(end == NULL) {
 		return 1;

@@ -11,6 +11,7 @@ void cstr_destroy(cstr s);
 cstr cstr_ncat(cstr s, char *b, size_t l);
 cstr* cstr_split(char *s, size_t len, char *b, size_t slen, size_t *l);
 void cstr_clear(cstr s);
+cstr cstr_range(cstr s, int b, int e);
 
 typedef struct {
     uint32_t len;

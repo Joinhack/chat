@@ -9,6 +9,9 @@
 
 #define IOF_CLOSE_AFTER_WRITE 0x1
 
+#define REQ_TYPE_NORMAL 0x0
+#define REQ_TYPE_MBULK 0x1
+
 typedef struct {
 	int fd;
 	int type;
@@ -17,6 +20,9 @@ typedef struct {
 	cstr wbuf;
 	int wcount;
 	char ip[128];
+	int nbulk;
+	int bulk_len;
+	int reqtype;
 	int port;
 	int flag;
 	cstr *argv;

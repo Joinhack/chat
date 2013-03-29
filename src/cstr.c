@@ -70,3 +70,34 @@ cstr* cstr_split(char *s, size_t len, char *b, size_t slen, size_t *l) {
 	*l = size;
 	return array;
 }
+
+cstr cstr_range(cstr s, int b, int e) {
+	cstrhdr *csh = CSTR_HDR(s);
+	int used = CSTR_HDR_USED(csh);
+	int end = e, begin = b, nlen;
+
+	if(end < 0) {
+		end += used;
+		if(end < 0)
+			end = 0;
+	}
+	if(begin < 0) {
+		begin += used;
+		if(begin < 0)
+			begin = 0;	
+	}
+	nlen = begin < end? end - begin + 1 : 0;
+	if(nlen != 0) {
+		if(begin > used)
+			nlen = 0;
+		else if(end > used) {
+			end = used - 1;
+			nlen = begin < end? end - begin + 1 : 0;
+		}
+	}
+	if(nlen && begin) memmove(csh->buff, csh->buff + begin, nlen);
+	csh->buff[nlen] = 0;
+	csh->free += used - nlen;
+	return s;
+}
+
