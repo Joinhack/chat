@@ -51,6 +51,7 @@ cio *cio_create() {
 	io->priv = NULL;
 	io->flag = 0;
 	io->argc = 0;
+	io->tabidx = 0;
 	io->bulk_len = 0;
 	io->nbulk = 0;
 	io->reqtype = REQ_TYPE_NORMAL;
@@ -69,6 +70,7 @@ void cio_destroy(cio *io) {
 	jfree(io);
 }
 
+//don't clear tabidx
 void cio_clear(cio *io) {
 	size_t i;
 	cstr_clear(io->rbuf);

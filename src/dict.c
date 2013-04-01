@@ -159,7 +159,7 @@ int dict_add(dict *d, void *key, void *val) {
 	entry->next = d->dt[htidx].entries[idx];
 	d->dt[htidx].used++;
 	d->dt[htidx].entries[idx] = entry;
-	return 0;
+	return 1;
 }
 
 int dict_replace(dict *d, void *key, void *val) {
@@ -201,7 +201,7 @@ static int dict_del_internal(dict *d, void *key, int flag) {
 	if(d->dt[0].size == 0) return 0;
 	DICT_TRY_REHASH(d);
 	hash = DICT_HASH(d, key);
-	for(i = 0; i <=1; i++) {
+	for(i = 0; i <= 1; i++) {
 		idx = hash&d->dt[i].mask;
 		entry = d->dt[i].entries[idx];
 		prev = NULL;

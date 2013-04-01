@@ -15,7 +15,7 @@ static int _response(cio *io);
 static int try_process_command(cio *io);
 
 static void install_read_event(cevents *cevts, cio *io) {
-	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 }
 
 void set_protocol_error(cio *io) {
@@ -113,14 +113,14 @@ static int _reply(cio *io) {
 	} else {
 		cevents_add_event(cevts, io->fd, CEV_WRITE, write_event_proc, io);
 	}
+	return 0;
 }
 
 int reply_str(cio *io, char *buff) {
 	cevents *cevts = ((server*)io->priv)->evts;
 	io->wcount = 0;
 	cstr_ncat(io->wbuf, buff, strlen(buff));
-	_reply(io);
-	return 0;
+	return _reply(io);
 }
 
 int reply_obj(cio *io, obj *obj) {
@@ -130,13 +130,22 @@ int reply_obj(cio *io, obj *obj) {
 		OBJ_LOCK(obj);
 		cstr_ncat(io->wbuf, s, strlen(s));
 		OBJ_UNLOCK(obj);
-		_reply(io);
+		return _reply(io);
 	}
+	return -1;
 }
 
 int reply_cstr(cio *io, cstr s) {
 	cstr_ncat(io->wbuf, s, strlen(s));
-	_reply(io);
+	return _reply(io);
+}
+
+int reply_err(cio *io, const char *err) {
+	char buf[1024];
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), "-ERR %s\r\n", err);
+	cstr_ncat(io->wbuf, buf, strlen(buf));
+	return _reply(io);
 }
 
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
@@ -229,7 +238,7 @@ static int try_process_multibluk_command(cio *io) {
 					reply_str(io, "-ERR unknow protocol\r\n");
 					return -1;
 				}
-				if(str2ll(io->rbuf + pos + 1, ptr - (io->rbuf + pos) - 1, &len) < 0 || (len > 1024*1024 || len <= 0)) {
+				if(str2ll(io->rbuf + pos + 1, ptr - (io->rbuf + pos) - 1, &len) < 0 || (len > MAX_COMMAND_LEN_LIMIT || len <= 0)) {
 					set_protocol_error(io);
 					reply_str(io, "-ERR: error bulk length \r\n");
 					return -1;
@@ -279,8 +288,7 @@ static int try_process_command(cio *io) {
 	io->argv = cstr_split(io->rbuf, nread, " ", 1, &io->argc);
 	s = io->argv[io->argc - 1];
 	//last already is 0
-	s[cstr_used(s) - 2] = 0;
-	s[cstr_used(s) - 3] = 0;
+	cstr_range(s, 0, -2);
 	return 0;
 }
 

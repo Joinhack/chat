@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <ctype.h>
 #include <string.h>
 #include "jmalloc.h"
 #include "cstr.h"
@@ -7,15 +8,16 @@
 #define CSH_USED(c) (c->len - c->free)
 
 cstr cstr_create(size_t len) {
-	char *c = jmalloc(len + HLEN);
+	char *c = jmalloc(len + HLEN + 1);
 	cstrhdr *csh = (cstrhdr*)c;
 	csh->len = len;
 	csh->free = len;
-	return (cstr)csh->buff;
+	csh->buf[len] = 0;
+	return (cstr)csh->buf;
 }
 
 cstr cstr_new(const char *c, size_t len) {
-	cstr s = cstr_create(len + 1);
+	cstr s = cstr_create(len);
 	cstrhdr *csh = CSTR_HDR(s);
 	memcpy(s, c, len);
 	s[len] = '\0';
@@ -28,28 +30,28 @@ void cstr_destroy(cstr s) {
 	jfree(ptr);
 }
 
-cstr cstr_extend(cstr s, size_t l) {
+cstr cstr_extend(cstr s, size_t add) {
 	cstrhdr *csh = CSTR_HDR(s);
-	if(csh->free >= l) return s;
-	csh->len = (csh->len + l)*2;
-	csh = jrealloc((void*)csh, csh->len);
-	return (cstr)csh->buff;
+	if(csh->free >= add) return s;
+	csh->len = (CSTR_HDR_USED(csh) + add)*2;
+	csh = jrealloc((void*)csh, csh->len + HLEN + 1);
+	return (cstr)csh->buf;
 }
 
-cstr cstr_ncat(cstr s, char *b, size_t l) {
+cstr cstr_ncat(cstr s, const char *b, size_t l) {
 	cstrhdr *csh;
 	s = cstr_extend(s, l);
 	csh = CSTR_HDR(s);
-	memcpy(csh->buff + CSH_USED(csh), b, l);
+	memcpy(csh->buf + CSH_USED(csh), b, l);
 	csh->free -= l;
 	s[CSTR_HDR_USED(csh)] = '\0';
-	return (cstr)csh->buff;
+	return (cstr)csh->buf;
 }
 
 void cstr_clear(cstr s) {
 	cstrhdr *csh = CSTR_HDR(s);
 	csh->free = csh->len;
-	csh->buff[0] = '\0';
+	csh->buf[0] = '\0';
 }
 
 cstr* cstr_split(char *s, size_t len, char *b, size_t slen, size_t *l) {
@@ -86,18 +88,35 @@ cstr cstr_range(cstr s, int b, int e) {
 		if(begin < 0)
 			begin = 0;	
 	}
-	nlen = begin < end? end - begin + 1 : 0;
+	nlen = begin < end? end - begin : 0;
 	if(nlen != 0) {
 		if(begin > used)
 			nlen = 0;
 		else if(end > used) {
 			end = used - 1;
-			nlen = begin < end? end - begin + 1 : 0;
+			nlen = begin < end? end - begin : 0;
 		}
 	}
-	if(nlen && begin) memmove(csh->buff, csh->buff + begin, nlen);
-	csh->buff[nlen] = 0;
+	if(nlen && begin) memmove(csh->buf, csh->buf + begin, nlen);
+	csh->buf[nlen] = 0;
 	csh->free += used - nlen;
 	return s;
+}
+
+void cstr_tolower(cstr s) {
+	size_t i;
+	for(i = 0; i < cstr_used(s); i++) s[i] = tolower(s[i]);
+}
+
+void cstr_toupper(cstr s) {
+	size_t i;
+	for(i = 0; i < cstr_used(s); i++) s[i] = toupper(s[i]);
+}
+
+cstr cstr_dup(cstr s) {
+	size_t used = cstr_used(s);
+	cstr ns = cstr_create(used);
+	cstr_ncat(ns, s, used);
+	return ns;
 }
 

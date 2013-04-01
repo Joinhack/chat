@@ -15,18 +15,24 @@ static struct shared_obj shared;
 
 typedef void (*cmd_call)(cio *io);
 
+void command_key_destroy(void *c) {
+	cstr s = (cstr)c;
+	cstr_destroy(s);
+}
+
 static unsigned int hash(const void *key) {
-	return dict_generic_hash((char*)key, strlen((char*)key));
+	cstr cs = (cstr)key;
+	return dict_generic_hash(cs, cstr_used(cs));
 }
 
 int command_key_compare(const void *k1, const void *k2) {
 	size_t len;
 	cstr s1 = (cstr)k1;
 	cstr s2 = (cstr)k2;
-	len = cstr_len(s1);
-	if(len != cstr_len(s2))
-		return 1;
-	return memcmp(k1, k2, len);
+	len = cstr_used(s1);
+	if(len != cstr_used(s2))
+		return 0;
+	return memcmp(k1, k2, len) == 0;
 }
 
 dict_opts command_opts = {
@@ -34,7 +40,7 @@ dict_opts command_opts = {
 	NULL,
 	NULL,
 	command_key_compare,
-	NULL,
+	command_key_destroy,
 	NULL,
 };
 
@@ -44,9 +50,31 @@ struct command {
 	int argc;
 };
 
+//use the lower-case for command
 struct command commands[] = {
 	{"ping", pong, 1},
+	{"get", pong, 2},
+	{"set", set_command, 3},
+	{"select", select_table, 2}
 };
+
+void set_command(cio *io) {
+	server *svr = (server*)io->priv;
+	obj *o = obj_create(OBJ_TYPE_STR, io->argv[2]);
+	db_set(svr->db, io->tabidx, io->argv[1], o);
+	reply_obj(io, shared.ok);
+}
+
+void select_table(cio *io) {
+	int rs;
+	server *svr = (server*)io->priv;
+	long long idx;
+	if(str2ll(io->argv[1], strlen(io->argv[1]), &idx) < 0 || idx >= svr->db->table_size) {
+		reply_err(io, "unknown table index");
+	}
+	io->tabidx = idx;
+	reply_obj(io, shared.ok);
+}
 
 void pong(cio *io) {
 	reply_obj(io, shared.pong);
@@ -57,7 +85,7 @@ static void regist_commands(server *svr) {
 	struct command *cmd;
 	for(i = 0; i < sizeof(commands)/sizeof(struct command); i++) {
 		cmd = &commands[i];
-		dict_add(svr->commands, cmd->name, cmd);
+		dict_add(svr->commands, cstr_new(cmd->name, strlen(cmd->name)), cmd);
 	}
 }
 
@@ -78,7 +106,9 @@ int process_commond(cio *io) {
 		return 0;
 	}
 	memset(buf, 0, sizeof(buf));
+	cstr_tolower(io->argv[0]);
 	cmd_entry = dict_find(svr->commands, io->argv[0]);
+	memset(buf, 0, sizeof(buf));
 	if(cmd_entry != NULL) {
 		cmd = (struct command*)cmd_entry->value;
 		if(cmd->argc >= 0) {
@@ -140,14 +170,9 @@ static server *create_server() {
 	server *svr;
 	
 	shared_obj_create();
-
 	svr = jmalloc(sizeof(server));
 	memset(svr, 0, sizeof(server));
-	svr->in_fd = create_tcp_server();
-	if(svr->in_fd < 0) {
-		destroy_server(svr);
-		return NULL;
-	}
+	
 	svr->logfd = fileno(stdout);
 	log_init(svr->logfd);
 
@@ -163,6 +188,15 @@ static server *create_server() {
 	svr->evts = cevents_create();
 	INFO("server used %s for event\n", svr->evts->impl_name);
 	svr->last_info_time = 0;
+
+	svr->db = db_create(16);
+
+	svr->in_fd = create_tcp_server();
+	if(svr->in_fd < 0) {
+		destroy_server(svr);
+		return NULL;
+	}
+
 	return svr;
 }
 

@@ -27,6 +27,7 @@ typedef struct {
 	int flag;
 	cstr *argv;
 	size_t argc;
+	int tabidx;
 	void *priv;
 } cio;
 

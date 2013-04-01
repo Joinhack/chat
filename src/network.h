@@ -14,6 +14,8 @@ int reply_obj(cio *io, obj *obj);
 
 int reply_cstr(cio *io, cstr s);
 
+int reply_err(cio *io, const char *err);
+
 int process_commond(cio *io);
 
 void shared_obj_create();

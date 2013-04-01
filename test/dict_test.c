@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <jmalloc.h>
 #include <dict.h>
 #include <cstr.h>
+
+#include <sys/time.h>
 
 
 unsigned int hash(const void *key) {
@@ -15,7 +18,7 @@ int compare(const void *k1, const void *k2) {
 }
 
 void* cpy(const void *k1) {
-	char *p = jmalloc(1024);
+	char *p = jmalloc(strlen((char*)k1));
 	memset(p, 0, sizeof(p));
 	strcpy(p, k1);
 	return p;
@@ -36,7 +39,9 @@ dict_opts opts = {
 
 int main() {
 	size_t i = 0, m, max=100000;
-	char buf[1024];
+	char buf[128];
+	struct timeval beg, end;
+	long sec ;
 	dict *d = dict_create(&opts);
 	for(m = 0; m < 3; m++) {
 		for(i = 0; i < max; i++) {
@@ -72,5 +77,20 @@ int main() {
 	printf("%d %llu\n", DICT_CAP(d),used_mem());
 	dict_destroy(d);
 	printf("%llu\n", used_mem());
+
+
+	d = dict_create(&opts);
+	gettimeofday(&beg, NULL);
+	for(i = 0; i < 1000000; i++) {
+		memset(buf, 0, sizeof(buf));
+		snprintf(buf, sizeof(buf), "%lu", i);
+		dict_add(d, buf, buf);
+	}
+
+	gettimeofday(&end, NULL);
+	sec = (end.tv_sec - beg.tv_sec)*1000;
+	sec += (end.tv_usec - beg.tv_usec)/1000;
+	printf("msec %ld, mm: %llu\n", sec, used_mem());
+	dict_destroy(d);
 	return 0;
 }

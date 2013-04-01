@@ -10,6 +10,10 @@ typedef struct db {
 	int table_size;
 } db;
 
-db db_create(size_t s);
+db* db_create(size_t s);
+
+void db_destroy(db* db);
+
+int db_set(db *db, size_t tabidx, void *k, void *v);
 
 #endif /**end db define*/
