@@ -41,7 +41,7 @@ int db_key_compare(const void *k1, const void *k2) {
 	cstr s2 = (cstr)k2;
 	len = cstr_len(s1);
 	if(len != cstr_len(s2))
-		return 1;
+		return 0;
 	return memcmp(k1, k2, len) == 0;
 }
 
@@ -67,12 +67,28 @@ db* db_create(size_t s) {
 	return db;
 }
 
-int db_set(db *db, size_t tabidx, void *k, void *v) {
+int db_set(db *db, size_t tabidx, cstr k, obj *v) {
 	dict *d;
 	int rs;
 	d = db->tables[tabidx];
 	LOCK(&db->locks[tabidx]);
 	dict_replace(d, k, v);
 	UNLOCK(&db->locks[tabidx]);
+}
+
+obj* db_get(db *db, size_t tabidx, cstr k) {
+	dict *d;
+	int rs;
+	obj *o = NULL;
+	dict_entry *entry;
+	d = db->tables[tabidx];
+	LOCK(&db->locks[tabidx]);
+	entry = dict_find(d, k);
+	if(entry != NULL) {
+		o = entry->value;
+		obj_incr(o);
+	}
+	UNLOCK(&db->locks[tabidx]);
+	return o;
 }
 

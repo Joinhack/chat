@@ -35,4 +35,6 @@ void select_table(cio *io);
 
 void set_command(cio *io);
 
+void get_command(cio *io);
+
 #endif /**end define server*/

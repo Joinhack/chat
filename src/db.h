@@ -2,6 +2,7 @@
 #define DB_H
 
 #include "dict.h"
+#include "obj.h"
 #include "lock.h"
 
 typedef struct db {
@@ -14,6 +15,8 @@ db* db_create(size_t s);
 
 void db_destroy(db* db);
 
-int db_set(db *db, size_t tabidx, void *k, void *v);
+int db_set(db *db, size_t tabidx, cstr k, obj *v);
+
+obj* db_get(db *db, size_t tabidx, cstr k);
 
 #endif /**end db define*/

@@ -86,11 +86,21 @@ int main() {
 		snprintf(buf, sizeof(buf), "%lu", i);
 		dict_add(d, buf, buf);
 	}
-
 	gettimeofday(&end, NULL);
 	sec = (end.tv_sec - beg.tv_sec)*1000;
 	sec += (end.tv_usec - beg.tv_usec)/1000;
-	printf("msec %ld, mm: %llu\n", sec, used_mem());
+	printf("add msec %ld, mm: %llu\n", sec, used_mem());
+
+	gettimeofday(&beg, NULL);
+	for(i = 0; i < 1000000; i++) {
+		memset(buf, 0, sizeof(buf));
+		snprintf(buf, sizeof(buf), "%lu", i);
+		dict_del(d, buf);
+	}
+	gettimeofday(&end, NULL);
+	sec = (end.tv_sec - beg.tv_sec)*1000;
+	sec += (end.tv_usec - beg.tv_usec)/1000;
+	printf("remove msec %ld, mm: %llu\n", sec, used_mem());
 	dict_destroy(d);
 	return 0;
 }

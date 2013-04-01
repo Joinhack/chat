@@ -9,6 +9,7 @@ struct shared_obj {
 	obj *pong;
 	obj *ok;
 	obj *cmd;
+	obj *nullbulk;
 };
 
 static struct shared_obj shared;
@@ -53,16 +54,24 @@ struct command {
 //use the lower-case for command
 struct command commands[] = {
 	{"ping", pong, 1},
-	{"get", pong, 2},
+	{"get", get_command, 2},
 	{"set", set_command, 3},
 	{"select", select_table, 2}
 };
+
+void get_command(cio *io) {
+	server *svr = (server*)io->priv;
+	obj *o = db_get(svr->db, io->tabidx, io->argv[1]);
+	if(o == NULL) {
+		reply_cstr(io, (cstr)shared.nullbulk->priv);
+	}
+}
 
 void set_command(cio *io) {
 	server *svr = (server*)io->priv;
 	obj *o = obj_create(OBJ_TYPE_STR, io->argv[2]);
 	db_set(svr->db, io->tabidx, io->argv[1], o);
-	reply_obj(io, shared.ok);
+	reply_cstr(io, (cstr)shared.ok->priv);
 }
 
 void select_table(cio *io) {
@@ -73,11 +82,11 @@ void select_table(cio *io) {
 		reply_err(io, "unknown table index");
 	}
 	io->tabidx = idx;
-	reply_obj(io, shared.ok);
+	reply_cstr(io, (cstr)shared.ok->priv);
 }
 
 void pong(cio *io) {
-	reply_obj(io, shared.pong);
+	reply_cstr(io, (cstr)shared.pong->priv);
 }
 
 static void regist_commands(server *svr) {
@@ -93,6 +102,7 @@ void shared_obj_create() {
 	shared.err = cstr_obj_create("-ERR\r\n");
 	shared.pong = cstr_obj_create("+PONG\r\n");
 	shared.ok = cstr_obj_create("+OK\r\n");
+	shared.nullbulk = cstr_obj_create("$-1\r\n");
 }
 
 int process_commond(cio *io) {

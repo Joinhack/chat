@@ -15,7 +15,7 @@ static int _response(cio *io);
 static int try_process_command(cio *io);
 
 static void install_read_event(cevents *cevts, cio *io) {
-	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
 }
 
 void set_protocol_error(cio *io) {
