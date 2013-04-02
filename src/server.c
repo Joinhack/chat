@@ -65,6 +65,7 @@ void get_command(cio *io) {
 	if(o == NULL) {
 		reply_cstr(io, (cstr)shared.nullbulk->priv);
 	}
+	reply_cstr(io, (cstr)shared.nullbulk->priv);
 }
 
 void set_command(cio *io) {

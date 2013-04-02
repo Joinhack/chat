@@ -118,8 +118,8 @@ static int _reply(cio *io) {
 
 int reply_str(cio *io, char *buff) {
 	cevents *cevts = ((server*)io->priv)->evts;
-	io->wcount = 0;
-	cstr_ncat(io->wbuf, buff, strlen(buff));
+	io->wcount = strlen(buff);
+	cstr_ncat(io->wbuf, buff, io->wcount);
 	return _reply(io);
 }
 
@@ -127,8 +127,9 @@ int reply_obj(cio *io, obj *obj) {
 	io->wcount = 0;
 	if(obj->type == OBJ_TYPE_STR) {
 		cstr s = (cstr)obj->priv;
+		io->wcount = cstr_used(s);
 		OBJ_LOCK(obj);
-		cstr_ncat(io->wbuf, s, strlen(s));
+		cstr_ncat(io->wbuf, s, io->wcount);
 		OBJ_UNLOCK(obj);
 		return _reply(io);
 	}
@@ -136,7 +137,8 @@ int reply_obj(cio *io, obj *obj) {
 }
 
 int reply_cstr(cio *io, cstr s) {
-	cstr_ncat(io->wbuf, s, strlen(s));
+	io->wcount = cstr_used(s);
+	cstr_ncat(io->wbuf, s, io->wcount);
 	return _reply(io);
 }
 
@@ -144,7 +146,8 @@ int reply_err(cio *io, const char *err) {
 	char buf[1024];
 	memset(buf, 0, sizeof(buf));
 	snprintf(buf, sizeof(buf), "-ERR %s\r\n", err);
-	cstr_ncat(io->wbuf, buf, strlen(buf));
+	io->wcount = strlen(buf);
+	cstr_ncat(io->wbuf, buf, io->wcount);
 	return _reply(io);
 }
 
@@ -157,8 +160,9 @@ int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 
 int _response(cio *io) {
 	int nwrite;
-	while(cstr_used(io->wbuf) != io->wcount) {	
-		nwrite = write(io->fd, io->wbuf + io->wcount, cstr_used(io->wbuf) - io->wcount);
+	size_t total = cstr_used(io->wbuf);
+	while(io->wcount > 0) {	
+		nwrite = write(io->fd, io->wbuf + (total - io->wcount), io->wcount);
 		if(nwrite < 0) {
 			//continue;
 			if(errno == EAGAIN) {
@@ -166,7 +170,7 @@ int _response(cio *io) {
 			}
 			return -1;
 		}
-		io->wcount += nwrite;
+		io->wcount -= nwrite;
 	}
 	return 0;
 }
