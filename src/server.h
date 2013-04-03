@@ -37,4 +37,6 @@ void set_command(cio *io);
 
 void get_command(cio *io);
 
+void del_command(cio *io);
+
 #endif /**end define server*/

@@ -22,4 +22,8 @@ void shared_obj_create();
 
 void *process_event(void *priv);
 
+int reply_bulk(cio *io, obj *obj);
+
+int reply_len(cio *io, long long l);
+
 #endif /*end define network*/

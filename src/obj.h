@@ -18,9 +18,9 @@ typedef struct obj {
 
 obj* obj_create(int type, void *priv);
 
-void obj_incr(obj *o);
+int obj_incr(obj *o);
 
-void obj_decr(obj *o);
+int obj_decr(obj *o);
 
 obj* dict_obj_create(dict_opts *opts);
 

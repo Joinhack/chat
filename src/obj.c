@@ -25,13 +25,15 @@ obj* cstr_obj_create(const char *s) {
 	return o;
 };
 
-void obj_incr(obj *o) {
+int obj_incr(obj *o) {
+	int rs;
 	OBJ_LOCK(o);
 	o->ref++;
 	OBJ_UNLOCK(o);
+	return o->ref;
 }
 
-void obj_decr(obj *o) {
+int obj_decr(obj *o) {
 	OBJ_LOCK(o);
 	o->ref--;
 	if(o->ref == 0) {
@@ -39,12 +41,16 @@ void obj_decr(obj *o) {
 		case OBJ_TYPE_DICT:
 			dict_destroy((dict*)o->priv);
 			break;
+		case OBJ_TYPE_STR:
+			cstr_destroy((cstr)o->priv);
+			break;
 		}
 		OBJ_UNLOCK(o);
 		LOCK_DESTROY(&o->lock);
 		jfree(o);
 		//must be return, the objecj is already released.
-		return;
+		return 1;
 	}
 	OBJ_UNLOCK(o);
+	return 0;
 }

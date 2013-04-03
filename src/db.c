@@ -14,6 +14,11 @@ void db_value_destroy(void *k) {
 	obj_decr(o);
 }
 
+void db_value_dup(void *k) {
+	obj *o = (obj*)k;
+	obj_incr(o);
+}
+
 void *db_key_dup(const void *k) {
 	cstr s = (cstr)k;
 	return cstr_dup(s);
@@ -39,8 +44,8 @@ int db_key_compare(const void *k1, const void *k2) {
 	size_t len;
 	cstr s1 = (cstr)k1;
 	cstr s2 = (cstr)k2;
-	len = cstr_len(s1);
-	if(len != cstr_len(s2))
+	len = cstr_used(s1);
+	if(len != cstr_used(s2))
 		return 0;
 	return memcmp(k1, k2, len) == 0;
 }
@@ -76,6 +81,16 @@ int db_set(db *db, size_t tabidx, cstr k, obj *v) {
 	UNLOCK(&db->locks[tabidx]);
 }
 
+int db_remove(db *db, size_t tabidx, cstr k) {
+	dict *d;
+	int rs;
+	d = db->tables[tabidx];
+	LOCK(&db->locks[tabidx]);
+	rs = dict_del(d, k);
+	UNLOCK(&db->locks[tabidx]);
+	return rs;
+}
+
 obj* db_get(db *db, size_t tabidx, cstr k) {
 	dict *d;
 	int rs;
@@ -84,10 +99,8 @@ obj* db_get(db *db, size_t tabidx, cstr k) {
 	d = db->tables[tabidx];
 	LOCK(&db->locks[tabidx]);
 	entry = dict_find(d, k);
-	if(entry != NULL) {
-		o = entry->value;
-		obj_incr(o);
-	}
+	if(entry != NULL)
+		obj_incr((obj*)entry->value);
 	UNLOCK(&db->locks[tabidx]);
 	return o;
 }

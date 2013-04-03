@@ -56,21 +56,35 @@ struct command commands[] = {
 	{"ping", pong, 1},
 	{"get", get_command, 2},
 	{"set", set_command, 3},
+	{"del", del_command, -1},
 	{"select", select_table, 2}
 };
+
+void del_command(cio *io) {
+	server *svr = (server*)io->priv;
+	size_t i;
+	long long rs = 0;
+	for(i = 1; i < io->argc; i++) {
+		if(db_remove(svr->db, io->tabidx, io->argv[i]))
+			rs++;
+	}
+	reply_len(io, rs);
+}
 
 void get_command(cio *io) {
 	server *svr = (server*)io->priv;
 	obj *o = db_get(svr->db, io->tabidx, io->argv[1]);
 	if(o == NULL) {
 		reply_cstr(io, (cstr)shared.nullbulk->priv);
+		return;
 	}
-	reply_cstr(io, (cstr)shared.nullbulk->priv);
+	reply_bulk(io, o);
+	obj_decr(o);
 }
 
 void set_command(cio *io) {
 	server *svr = (server*)io->priv;
-	obj *o = obj_create(OBJ_TYPE_STR, io->argv[2]);
+	obj *o = obj_create(OBJ_TYPE_STR, cstr_dup(io->argv[2]));
 	db_set(svr->db, io->tabidx, io->argv[1], o);
 	reply_cstr(io, (cstr)shared.ok->priv);
 }
@@ -123,7 +137,7 @@ int process_commond(cio *io) {
 	if(cmd_entry != NULL) {
 		cmd = (struct command*)cmd_entry->value;
 		if(cmd->argc >= 0) {
-			if(cmd->argc != io->argc) {
+			if(cmd->argc != -1 && cmd->argc != io->argc) {
 				snprintf(buf,sizeof(buf), "-ERR wrong number arguments for command '%s'\r\n", io->argv[0]);
 				return reply_str(io, buf);
 			}

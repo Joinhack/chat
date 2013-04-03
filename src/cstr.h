@@ -26,8 +26,7 @@ typedef struct {
 #define CSTR_REALPTR(s) ((char*)(s - HLEN))
 #define CSTR_HDR(s) ((cstrhdr*)(s - HLEN))
 #define cstr_len(s) CSTR_HDR(s)->len
-#define cstr_used(s) (CSTR_HDR(s)->len - CSTR_HDR(s)->free)
 #define CSTR_HDR_USED(s) (s->len - s->free)
-
+#define cstr_used(s) (CSTR_HDR_USED(CSTR_HDR(s)))
 
 #endif /*end common str define*/

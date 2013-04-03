@@ -96,8 +96,7 @@ int response(cio *io) {
 		install_read_event(cevts, io);
 		cevents_del_event(cevts, io->fd, CEV_WRITE);
 	} else {
-		//read try again for next request. in most cases, it just rebind the read event.
-		read_event_proc(cevts, io->fd, io, CEV_READ);
+		install_read_event(cevts, io);
 		return 0;
 	}
 	return 0;
@@ -116,38 +115,81 @@ static int _reply(cio *io) {
 	return 0;
 }
 
-int reply_str(cio *io, char *buff) {
-	cevents *cevts = ((server*)io->priv)->evts;
-	io->wcount = strlen(buff);
-	cstr_ncat(io->wbuf, buff, io->wcount);
+static int _reply_str(cio *io, char *buf) {
+	size_t len;
+	len = strlen(buf);
+	io->wcount += len;
+	cstr_ncat(io->wbuf, buf, len);
+	return 0;
+}
+
+int reply_str(cio *io, char *buf) {
+	_reply_str(io, buf);
 	return _reply(io);
 }
 
-int reply_obj(cio *io, obj *obj) {
-	io->wcount = 0;
+static inline int _reply_obj(cio *io, obj *obj) {
+	size_t len;
 	if(obj->type == OBJ_TYPE_STR) {
 		cstr s = (cstr)obj->priv;
-		io->wcount = cstr_used(s);
-		OBJ_LOCK(obj);
-		cstr_ncat(io->wbuf, s, io->wcount);
-		OBJ_UNLOCK(obj);
-		return _reply(io);
+		len = cstr_used(s);
+		io->wcount += len;
+		cstr_ncat(io->wbuf, s, len);
+		return 0;
 	}
 	return -1;
 }
 
+int reply_obj(cio *io, obj *obj) {
+	_reply_obj(io, obj);
+	return _reply(io);
+}
+
+static inline int _reply_prefix_len(cio *io, char prefix, long long l) {
+	size_t len;
+	char buf[64] = {0};
+	buf[0] = prefix;
+	ll2str(l, buf + 1, sizeof(buf) - 1);
+	len = strlen(buf + 1);
+	buf[len + 1] = '\r';
+	buf[len + 2] = '\n';
+	cstr_ncat(io->wbuf, buf, 3 + len);
+	io->wcount += 3 + len;
+	return 0;
+}
+
+int reply_len(cio *io, long long l) {
+	 _reply_prefix_len(io, ':', l);
+	return _reply(io);
+}
+
+int reply_bulk(cio *io, obj *obj) {
+	long long len = 0;
+	if(obj->type == OBJ_TYPE_STR) {
+		cstr s = (cstr)obj->priv;
+		len = cstr_used(s);
+	}
+	_reply_prefix_len(io, '$', len);
+	_reply_obj(io, obj);
+	reply_str(io, "\r\n");
+	return 0;
+}
+
 int reply_cstr(cio *io, cstr s) {
-	io->wcount = cstr_used(s);
-	cstr_ncat(io->wbuf, s, io->wcount);
+	size_t len;
+	len = cstr_used(s);
+	io->wcount += len;
+	cstr_ncat(io->wbuf, s, len);
 	return _reply(io);
 }
 
 int reply_err(cio *io, const char *err) {
-	char buf[1024];
-	memset(buf, 0, sizeof(buf));
+	size_t len;
+	char buf[1024] = {0};
 	snprintf(buf, sizeof(buf), "-ERR %s\r\n", err);
-	io->wcount = strlen(buf);
-	cstr_ncat(io->wbuf, buf, io->wcount);
+	len = strlen(buf);
+	io->wcount += len;
+	cstr_ncat(io->wbuf, buf, len);
 	return _reply(io);
 }
 

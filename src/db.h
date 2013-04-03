@@ -19,4 +19,6 @@ int db_set(db *db, size_t tabidx, cstr k, obj *v);
 
 obj* db_get(db *db, size_t tabidx, cstr k);
 
+int db_remove(db *db, size_t tabidx, cstr k);
+
 #endif /**end db define*/

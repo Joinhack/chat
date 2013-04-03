@@ -2,7 +2,7 @@ CC = gcc
 INC = ../src
 OPTS = -g
 
-TARGS=cstr_test cnet_test cthread_test jmalloc_test clist_test dict_test common_test
+TARGS=cstr_test cnet_test cthread_test jmalloc_test clist_test dict_test common_test db_test
 
 
 all: $(TARGS)
@@ -24,6 +24,9 @@ clist_test:
 
 dict_test:
 	$(CC) -o $@ dict_test.c  ../src/dict.c ../src/cstr.c ../src/jmalloc.c -I$(INC)  $(OPTS)
+
+db_test:
+	$(CC) -o $@ db_test.c  ../src/dict.c ../src/cstr.c ../src/db.c ../src/spinlock.c ../src/obj.c ../src/jmalloc.c -I$(INC)  $(OPTS)
 
 common_test:
 	$(CC) -o $@ common_test.c  ../src/common.c -I$(INC)  $(OPTS)
