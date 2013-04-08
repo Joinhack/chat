@@ -61,10 +61,10 @@ int ll2str(long long l, char *p, size_t size) {
 	memset(buf, 0, bs);
 	ptr = buf + bs;
 	ll = l < 0?-l:l;
-	while(ll) {
+	do {
 		*(--ptr) = '0' + ll%10;
 		ll /= 10;
-	}
+	} while(ll);
 	offset = (buf + bs) - ptr;
 	len =  offset;
 	if(l < 0) {

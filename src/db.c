@@ -100,8 +100,9 @@ obj* db_get(db *db, size_t tabidx, cstr k) {
 	LOCK(&db->locks[tabidx]);
 	entry = dict_find(d, k);
 	if(entry != NULL)
-		obj_incr((obj*)entry->value);
+		o = (obj*)entry->value;
 	UNLOCK(&db->locks[tabidx]);
+	if(o) obj_incr(o);
 	return o;
 }
 
