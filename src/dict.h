@@ -50,7 +50,7 @@ dict_entry *dict_find(dict *d, void *key);
 
 int dict_del_no_free(dict *d, void *key);
 
-#define DICT_SIZE(d) (d->dt[0].used + d->dt[1].used)
+#define DICT_USED(d) (d->dt[0].used + d->dt[1].used)
 
 #define DICT_IS_REHASHING(d) (d->rehashidx != -1)
 

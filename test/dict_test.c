@@ -49,7 +49,7 @@ int main() {
 			snprintf(buf, sizeof(buf), ";;%lu;;", i);
 			dict_add(d, buf, buf);
 		}
-		printf("add %d, %d %llu\n", DICT_SIZE(d), DICT_CAP(d),used_mem());
+		printf("add %d, %d %llu\n", DICT_USED(d), DICT_CAP(d),used_mem());
 		for(i = 0; i < max; i++) {
 			dict_entry *entry;
 			memset(buf, 0, sizeof(buf));
@@ -58,22 +58,22 @@ int main() {
 			if(strcmp((char*)entry->value, (char*)buf) != 0)
 				abort();
 		}
-		printf("find %d, %d %llu\n", DICT_SIZE(d), DICT_CAP(d),used_mem());
+		printf("find %d, %d %llu\n", DICT_USED(d), DICT_CAP(d),used_mem());
 		for(i = 0; i < max; i++) {
 			memset(buf, 0, sizeof(buf));
 			snprintf(buf, sizeof(buf), ";;%lu;;", i);
 			dict_replace(d, buf, buf);
 		}
-		printf("prelace %d, %d %llu\n", DICT_SIZE(d), DICT_CAP(d),used_mem());
+		printf("prelace %d, %d %llu\n", DICT_USED(d), DICT_CAP(d),used_mem());
 		for(i = 0; i < max; i++) {
 			memset(buf, 0, sizeof(buf));
 			snprintf(buf, sizeof(buf), ";;%lu;;", i);
 			dict_del(d, buf);
 		}
-		printf("delete %d, %d %llu\n", DICT_SIZE(d), DICT_CAP(d),used_mem());
+		printf("delete %d, %d %llu\n", DICT_USED(d), DICT_CAP(d),used_mem());
 	}
 	dict_expand(d, max*2);
-	printf("%d, %d %llu\n", DICT_SIZE(d), DICT_CAP(d),used_mem());
+	printf("%d, %d %llu\n", DICT_USED(d), DICT_CAP(d),used_mem());
 	printf("%d %llu\n", DICT_CAP(d),used_mem());
 	dict_destroy(d);
 	printf("%llu\n", used_mem());

@@ -57,8 +57,38 @@ struct command commands[] = {
 	{"get", get_command, 2},
 	{"set", set_command, 3},
 	{"del", del_command, -1},
+	{"info", info_command, 1},
 	{"select", select_table, 2}
 };
+
+void info(cio *io, char *buf, size_t len) {
+	server *svr = (server*)io->priv;
+	snprintf(buf, len, "keys:%u\r\n"
+		"used memory:%llu\r\n"
+		"total memory:%llu\r\n"
+		"\r\n", 
+		DICT_USED(svr->db->tables[io->tabidx]),
+		used_mem(),
+		total_mem()
+		);
+}
+
+void info_command(cio *io) {
+	char buf[2048] = {0};
+	char *ptr = buf;
+	int len, slen;
+	server *svr = (server*)io->priv;
+	*(ptr++) = '$';
+	info(io, ptr + 32, sizeof(buf) - 32);
+	slen = strlen(ptr + 32);
+	ll2str(slen - 2, ptr, 32);
+	len = strlen(ptr);
+	*(ptr+len) = '\r';
+	*(ptr+len+1) = '\n';
+	memmove(ptr + len + 2, ptr + 32, slen);
+	*(ptr+len+2+slen) = '\0';
+	reply_str(io, buf);
+}
 
 void del_command(cio *io) {
 	server *svr = (server*)io->priv;
