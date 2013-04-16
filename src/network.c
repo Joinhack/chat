@@ -264,7 +264,7 @@ static int try_process_multibluk_command(cio *io) {
 		io->nbulk = len;
 		io->argc = 0;
 		if(io->argv) jfree(io->argv);
-		io->argv = jmalloc(io->nbulk*sizeof(cstr));
+		io->argv = jmalloc(io->nbulk*sizeof(struct obj*));
 	}
 	while(io->nbulk) {
 		if(io->bulk_len == 0) {
@@ -298,8 +298,7 @@ static int try_process_multibluk_command(cio *io) {
 			ret = 1;
 			break;
 		}
-
-		io->argv[io->argc++] = cstr_new(io->rbuf + pos, io->bulk_len);
+		io->argv[io->argc++] = obj_create(OBJ_TYPE_STR, cstr_new(io->rbuf + pos, io->bulk_len));
 		pos += io->bulk_len + 2;
 		io->bulk_len = 0;
 		io->nbulk--;
@@ -310,9 +309,10 @@ static int try_process_multibluk_command(cio *io) {
 }
 
 static int try_process_command(cio *io) {
-	size_t nread = cstr_used(io->rbuf);
+	size_t i, nread = cstr_used(io->rbuf);
 	cstr s;
 	char *end;
+	cstr *argv;
 	if(nread <= 0)
 		return -1;
 
@@ -331,10 +331,15 @@ static int try_process_command(cio *io) {
 	if(end == NULL) {
 		return 1;
 	}
-	io->argv = cstr_split(io->rbuf, nread, " ", 1, &io->argc);
-	s = io->argv[io->argc - 1];
+	argv = cstr_split(io->rbuf, nread, " ", 1, &io->argc);
+	s = argv[io->argc - 1];
 	//last already is 0
 	cstr_range(s, 0, -2);
+	io->argv = jmalloc(io->argc*sizeof(struct obj*));
+	for(i = 0; i < io->argc; i++) {
+		io->argv[i] = obj_create(OBJ_TYPE_STR, argv[i]);
+	}
+	jfree(argv);
 	return 0;
 }
 

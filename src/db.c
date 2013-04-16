@@ -5,7 +5,8 @@
 #include "db.h"
 #include "obj.h"
 
-unsigned int hash(const void *key) {
+unsigned int hash(const void *okey) {
+	cstr key = (cstr)((obj*)okey)->priv;
 	return dict_generic_hash((char*)key, strlen((char*)key));
 }
 
@@ -20,12 +21,14 @@ void db_value_dup(void *k) {
 }
 
 void *db_key_dup(const void *k) {
-	cstr s = (cstr)k;
-	return cstr_dup(s);
+	obj *o = (obj*)k;
+	obj_incr(o);
+	return o;
 }
 
 void db_key_destroy(void *k) {
-	cstr_destroy((cstr)k);
+	obj *o = (obj*)k;
+	obj_decr(o);
 }
 
 void db_destroy(db* db) {
@@ -42,12 +45,12 @@ void db_destroy(db* db) {
 
 int db_key_compare(const void *k1, const void *k2) {
 	size_t len;
-	cstr s1 = (cstr)k1;
-	cstr s2 = (cstr)k2;
+	cstr s1 = (cstr)((obj*)k1)->priv;
+	cstr s2 = (cstr)((obj*)k2)->priv;
 	len = cstr_used(s1);
 	if(len != cstr_used(s2))
 		return 0;
-	return memcmp(k1, k2, len) == 0;
+	return memcmp(s1, s2, len) == 0;
 }
 
 dict_opts db_opts = {
@@ -72,16 +75,18 @@ db* db_create(size_t s) {
 	return db;
 }
 
-int db_set(db *db, size_t tabidx, cstr k, obj *v) {
+int db_set(db *db, size_t tabidx, obj *k, obj *v) {
 	dict *d;
 	int rs;
 	d = db->tables[tabidx];
 	LOCK(&db->locks[tabidx]);
+	printf("xxxxx\n");
+	sleep(1);
 	dict_replace(d, k, v);
 	UNLOCK(&db->locks[tabidx]);
 }
 
-int db_remove(db *db, size_t tabidx, cstr k) {
+int db_remove(db *db, size_t tabidx, obj *k) {
 	dict *d;
 	int rs;
 	d = db->tables[tabidx];
@@ -91,7 +96,7 @@ int db_remove(db *db, size_t tabidx, cstr k) {
 	return rs;
 }
 
-obj* db_get(db *db, size_t tabidx, cstr k) {
+obj* db_get(db *db, size_t tabidx, obj *k) {
 	dict *d;
 	int rs;
 	obj *o = NULL;

@@ -80,6 +80,7 @@ int main() {
 
 
 	d = dict_create(&opts);
+
 	gettimeofday(&beg, NULL);
 	for(i = 0; i < 1000000; i++) {
 		memset(buf, 0, sizeof(buf));
@@ -92,6 +93,19 @@ int main() {
 	printf("add msec %ld, mm: %llu\n", sec, used_mem());
 
 	gettimeofday(&beg, NULL);
+	dict_iterator *iter = dict_get_iterator(d);
+	dict_entry *entry = NULL;
+	i = 0;
+	while((entry = dict_iterator_next(iter)) != NULL){
+		i++;
+	}
+	dict_iterator_destroy(iter);
+	gettimeofday(&end, NULL);
+	sec = (end.tv_sec - beg.tv_sec)*1000;
+	sec += (end.tv_usec - beg.tv_usec)/1000;
+	printf("iterator msec %ld, times: %lu mm: %llu\n", sec, i, used_mem());
+
+	gettimeofday(&beg, NULL);
 	for(i = 0; i < 1000000; i++) {
 		memset(buf, 0, sizeof(buf));
 		snprintf(buf, sizeof(buf), "%lu", i);
@@ -101,6 +115,10 @@ int main() {
 	sec = (end.tv_sec - beg.tv_sec)*1000;
 	sec += (end.tv_usec - beg.tv_usec)/1000;
 	printf("remove msec %ld, mm: %llu\n", sec, used_mem());
+
 	dict_destroy(d);
+	printf("%llu\r\n", used_mem());
+
+
 	return 0;
 }

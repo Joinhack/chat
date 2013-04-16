@@ -4,6 +4,7 @@
 typedef struct dict_entry {
 	void *key;
 	void *value;
+	int ref;
 	struct dict_entry *next;
 } dict_entry;
 
@@ -28,7 +29,15 @@ typedef struct dict {
 	//when in rehash step 0 is used for old dict_table, 1 is used for new hashtable
 	dict_table dt[2];
 	int rehashidx;
+	int iterators;
 } dict;
+
+typedef struct dict_iterator {
+	dict *d;
+	int dt_idx;
+	int idx;
+	dict_entry *entry;
+} dict_iterator;
 
 dict *dict_create(dict_opts *opts);
 
@@ -41,6 +50,12 @@ int dict_rehash(dict *d, int n);
 int dict_expand(dict *d, unsigned int size);
 
 int dict_add(dict *d, void *key, void *val);
+
+dict_iterator *dict_get_iterator(dict *d);
+
+dict_entry *dict_iterator_next(dict_iterator *iter);
+
+void dict_iterator_destroy(dict_iterator *iter);
 
 int dict_replace(dict *d, void *key, void *val);
 

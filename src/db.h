@@ -15,10 +15,10 @@ db* db_create(size_t s);
 
 void db_destroy(db* db);
 
-int db_set(db *db, size_t tabidx, cstr k, obj *v);
+int db_set(db *db, size_t tabidx, obj *k, obj *v);
 
-obj* db_get(db *db, size_t tabidx, cstr k);
+obj* db_get(db *db, size_t tabidx, obj *k);
 
-int db_remove(db *db, size_t tabidx, cstr k);
+int db_remove(db *db, size_t tabidx, obj *k);
 
 #endif /**end db define*/

@@ -5,7 +5,10 @@
 #include "jmalloc.h"
 #include "dict.h"
 
-#define DICT_TRY_REHASH(d) if(DICT_IS_REHASHING(d)) dict_rehash(d, 1)
+#define DICT_TRY_REHASH(d) if(DICT_IS_REHASHING(d) && d->iterators == 0) dict_rehash(d, 1)
+
+#define ENTRY_DECR(e) if(--e->ref == 0) jfree(e)
+#define ENTRY_INCR(e) e->ref++
 
 static unsigned int _pow_size(unsigned int size) {
 	unsigned int s = DICT_INIT_SIZE;
@@ -30,7 +33,7 @@ static void _table_clear(dict *d, dict_table *table) {
 			next = entry->next;
 			DICT_KEY_DESTROY(d, entry);
 			DICT_VALUE_DESTROY(d, entry);
-			jfree(entry);
+			ENTRY_DECR(entry);
 			table->used--;
 			entry = next;
 		}
@@ -46,6 +49,7 @@ dict *dict_create(dict_opts *opts) {
 	_table_reset(&d->dt[1]);
 	d->rehashidx = -1;
 	d->opts = opts;
+	d->iterators = 0;
 	return d;
 }
 
@@ -154,6 +158,7 @@ int dict_add(dict *d, void *key, void *val) {
 	if((idx = _dict_key_index(d, key)) < 0) return -1;
 	htidx = DICT_IS_REHASHING(d)?1:0;
 	entry = jmalloc(sizeof(struct dict_entry));
+	entry->ref = 1;
 	DICT_SET_KEY(d, entry, key);
 	DICT_SET_VALUE(d, entry, val);
 	entry->next = d->dt[htidx].entries[idx];
@@ -215,7 +220,7 @@ static int dict_del_internal(dict *d, void *key, int flag) {
 					prev->next = entry->next;
 				else
 					d->dt[i].entries[idx] = entry->next;
-				jfree(entry);
+				ENTRY_DECR(entry);
 				d->dt[i].used--;
 				return 1;
 			}
@@ -244,4 +249,50 @@ unsigned int dict_generic_hash(const char *buf, size_t len) {
 		hash = ((hash << 5) + hash) + (*buf++); /* hash * 33 + c */
 	return hash;
 }
+
+dict_iterator *dict_get_iterator(dict *d) {
+	dict_iterator *iter;
+	iter = jmalloc(sizeof(struct dict_iterator));
+	iter->dt_idx = 0;
+	iter->idx = -1;
+	iter->d = d;
+	iter->entry = NULL;
+	return iter;
+}
+
+dict_entry *dict_iterator_next(dict_iterator *iter) {
+	dict *d = iter->d;
+	while(1) {
+		if(iter->entry == NULL) {
+			if(iter->dt_idx == 0 && iter->idx == -1)
+				d->iterators++;
+			iter->idx++;
+			if(iter->idx >= d->dt[iter->dt_idx].size) {
+				if(iter->dt_idx == 0 && DICT_IS_REHASHING(d)) {
+					iter->dt_idx++;
+					iter->idx = 0;
+				} else
+					break;
+			}
+			iter->entry = d->dt[iter->dt_idx].entries[iter->idx];
+		} else {
+			ENTRY_DECR(iter->entry);
+			iter->entry = iter->entry->next;
+		}
+		if(iter->entry) {
+			ENTRY_INCR(iter->entry);
+			return iter->entry;
+		}
+	}
+	return NULL;
+}
+
+void dict_iterator_destroy(dict_iterator *iter) {
+	if(!(iter->idx == -1 && iter->dt_idx == 0))
+		iter->d->iterators--;
+	if(iter->entry)
+		ENTRY_DECR(iter->entry);
+	jfree(iter);
+}
+
 

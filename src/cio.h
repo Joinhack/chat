@@ -2,6 +2,7 @@
 #define CIO_H
 
 #include "cstr.h"
+#include "obj.h"
 
 #define IO_TCP 0x1
 #define IO_UN 0x1<<1
@@ -25,7 +26,7 @@ typedef struct {
 	int reqtype;
 	int port;
 	int flag;
-	cstr *argv;
+	obj **argv;
 	size_t argc;
 	int tabidx;
 	void *priv;

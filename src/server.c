@@ -62,7 +62,7 @@ struct command commands[] = {
 };
 
 void info(cio *io, char *buf, size_t len) {
-	server *svr = (server*)io->priv;
+	server *svr = (server*) io->priv;
 	snprintf(buf, len, "keys:%u\r\n"
 		"used memory:%llu\r\n"
 		"total memory:%llu\r\n"
@@ -114,7 +114,8 @@ void get_command(cio *io) {
 
 void set_command(cio *io) {
 	server *svr = (server*)io->priv;
-	obj *o = obj_create(OBJ_TYPE_STR, cstr_dup(io->argv[2]));
+	obj *o = io->argv[2];
+	obj_incr(o);
 	db_set(svr->db, io->tabidx, io->argv[1], o);
 	reply_cstr(io, (cstr)shared.ok->priv);
 }
@@ -123,7 +124,7 @@ void select_table(cio *io) {
 	int rs;
 	server *svr = (server*)io->priv;
 	long long idx;
-	if(str2ll(io->argv[1], strlen(io->argv[1]), &idx) < 0 || idx >= svr->db->table_size) {
+	if(str2ll((cstr)io->argv[1]->priv, strlen((cstr)io->argv[1]->priv), &idx) < 0 || idx >= svr->db->table_size) {
 		reply_err(io, "unknown table index");
 	}
 	io->tabidx = idx;
@@ -155,27 +156,27 @@ int process_commond(cio *io) {
 	server *svr = (server*)io->priv;
 	dict_entry *cmd_entry;
 	struct command *cmd;
-	if(strcasecmp(io->argv[0], "quit") == 0) {
+	if(strcasecmp((cstr)io->argv[0]->priv, "quit") == 0) {
 		io->flag |= IOF_CLOSE_AFTER_WRITE;
 		reply_obj(io, shared.ok);
 		return 0;
 	}
 	memset(buf, 0, sizeof(buf));
-	cstr_tolower(io->argv[0]);
-	cmd_entry = dict_find(svr->commands, io->argv[0]);
+	cstr_tolower((cstr)io->argv[0]->priv);
+	cmd_entry = dict_find(svr->commands, (cstr)io->argv[0]->priv);
 	memset(buf, 0, sizeof(buf));
 	if(cmd_entry != NULL) {
 		cmd = (struct command*)cmd_entry->value;
 		if(cmd->argc >= 0) {
 			if(cmd->argc != -1 && cmd->argc != io->argc) {
-				snprintf(buf,sizeof(buf), "-ERR wrong number arguments for command '%s'\r\n", io->argv[0]);
+				snprintf(buf,sizeof(buf), "-ERR wrong number arguments for command '%s'\r\n", (cstr)io->argv[0]->priv);
 				return reply_str(io, buf);
 			}
 		}
 		cmd->call(io);
 		return 0;
 	}
-	snprintf(buf,sizeof(buf), "-ERR unknown command '%s'\r\n", io->argv[0]);
+	snprintf(buf,sizeof(buf), "-ERR unknown command '%s'\r\n", (cstr)io->argv[0]->priv);
 	return reply_str(io, buf);
 }
 

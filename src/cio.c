@@ -64,7 +64,7 @@ void cio_destroy(cio *io) {
 	cstr_destroy(io->rbuf);
 	cstr_destroy(io->wbuf);
 	for(i = 0; i < io->argc; i++) {
-		cstr_destroy(io->argv[i]);
+		obj_decr(io->argv[i]);
 	}
 	if(io->argv != NULL) jfree(io->argv);
 	jfree(io);
@@ -76,7 +76,7 @@ void cio_clear(cio *io) {
 	cstr_clear(io->rbuf);
 	cstr_clear(io->wbuf);
 	for(i = 0; i < io->argc; i++) {
-		cstr_destroy(io->argv[i]);
+		obj_decr(io->argv[i]);
 	}
 	if(io->argv != NULL) jfree(io->argv);
 	io->mask = 0;
