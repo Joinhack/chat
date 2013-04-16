@@ -80,8 +80,6 @@ int db_set(db *db, size_t tabidx, obj *k, obj *v) {
 	int rs;
 	d = db->tables[tabidx];
 	LOCK(&db->locks[tabidx]);
-	printf("xxxxx\n");
-	sleep(1);
 	dict_replace(d, k, v);
 	UNLOCK(&db->locks[tabidx]);
 }

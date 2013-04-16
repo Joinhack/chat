@@ -84,7 +84,7 @@ int cevents_add_event_inner(cevents *cevts, int fd, int mask, event_proc *proc, 
 		return J_ERR;
 	evt = cevts->events + fd;
 	if((rs = cevents_add_event_impl(cevts, fd, mask)) < 0) {
-		ERROR("add event error:%s\n", strerror(errno));
+		ERROR("fd %d add event error:%s\n", fd, strerror(errno));
 		return rs;
 	}
 	if(mask & CEV_READ) evt->read_proc = proc;
@@ -170,6 +170,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 				if(evt->mask && (fired->mask & CEV_READ)) {
 					//just send read event to event queue.
 					if(evt->read_proc(cevts, fired->fd, evt->priv, fired->mask) == 0) {
+						cevents_del_event(cevts, fired->fd, CEV_READ);
 						cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
 						count++;
 					}

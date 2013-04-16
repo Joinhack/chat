@@ -52,7 +52,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 int cio_close_destroy(cevents *cevts, int fd, void *priv, int mask) {
 	server *svr;
 	cio *io = (cio*)priv;
-	DEBUG("client %s:%d closed\n", io->ip, io->port);
+	DEBUG("client[%d] %s:%d closed\n", fd, io->ip, io->port);
 	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);	
 	svr = (server*)io->priv;
 	atomic_sub_uint32(&svr->connections, 1);
