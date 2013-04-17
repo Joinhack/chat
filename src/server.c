@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "server.h"
+#include "dump.h"
 
 struct shared_obj {
 	obj *err;
@@ -55,6 +56,7 @@ struct command {
 struct command commands[] = {
 	{"ping", pong, 1},
 	{"get", get_command, 2},
+	{"dump", dump_command, 1},
 	{"set", set_command, 3},
 	{"del", del_command, -1},
 	{"info", info_command, 1},
@@ -88,6 +90,11 @@ void info_command(cio *io) {
 	memmove(ptr + len + 2, ptr + 32, slen);
 	*(ptr+len+2+slen) = '\0';
 	reply_str(io, buf);
+}
+
+void dump_command(cio *io) {
+	dump_db((server*)io->priv);
+	reply_cstr(io, (cstr)shared.ok->priv);
 }
 
 void del_command(cio *io) {
