@@ -1,6 +1,7 @@
 CC=gcc
-CFLAGS= -g -std=gnu99 -DUSE_TRACE 
+CFLAGS= -g -std=gnu99 -DUSE_TRACE
 OPTS = -lpthread 
+
 
 
 .c.o:

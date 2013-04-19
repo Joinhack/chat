@@ -57,6 +57,7 @@ struct command commands[] = {
 	{"ping", pong, 1},
 	{"get", get_command, 2},
 	{"dump", dump_command, 1},
+	{"load", load_command, 1},
 	{"set", set_command, 3},
 	{"del", del_command, -1},
 	{"info", info_command, 1},
@@ -93,8 +94,19 @@ void info_command(cio *io) {
 }
 
 void dump_command(cio *io) {
-	dump_db((server*)io->priv);
-	reply_cstr(io, (cstr)shared.ok->priv);
+	int rs = dump_save((server*)io->priv);
+	if(rs == 0)
+		reply_cstr(io, (cstr)shared.ok->priv);
+	else
+		reply_cstr(io, (cstr)shared.err->priv);
+}
+
+void load_command(cio *io) {
+	int rs = dump_load((server*)io->priv);
+	if(rs == 0)
+		reply_cstr(io, (cstr)shared.ok->priv);
+	else
+		reply_cstr(io, (cstr)shared.err->priv);
 }
 
 void del_command(cio *io) {
@@ -226,7 +238,17 @@ int create_tcp_server() {
 
 
 static void destroy_server(server *svr) {
-
+	if(svr->in_fd > 0)
+		close(svr->in_fd);
+	if(svr->logfd > 0)
+		close(svr->logfd);
+	if(svr->thr_pool)
+		cthr_pool_destroy(svr->thr_pool);
+	if(svr->evts)
+		cevents_destroy(svr->evts);
+	if(svr->commands)
+		dict_destroy(svr->commands);
+	jfree(svr);
 }
 
 static server *create_server() {

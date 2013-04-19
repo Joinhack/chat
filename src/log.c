@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include "log.h"
 #include "lock.h"
@@ -51,6 +52,19 @@ static void log_fmt(char *buf, size_t len, int level, const char *fmt, va_list a
 	vsnprintf(buf, len, inner_fmt, arg_list);
 }
 
+static int log_write(int fd, char *ptr, size_t len) {
+	int count = 0;
+	int wn = 0;
+	while(count < len ) {
+		wn = write(fd, ptr, len - count);
+		if(wn == 0) return count;
+		if(wn == -1) return -1;
+		ptr += wn;
+		count += wn;
+	}
+	return count;
+}
+
 void log_print(int level, char *fmt, ...) {
 	char buf[65535];
 	if(level < top_level)
@@ -61,7 +75,7 @@ void log_print(int level, char *fmt, ...) {
 	log_fmt(buf, sizeof(buf), level, fmt, arg_list);
 	va_end(arg_list);
 	LOCK(&lock);
-	cio_write(logfd, buf, strlen(buf));
+	log_write(logfd, buf, strlen(buf));
 	UNLOCK(&lock);
 }
 

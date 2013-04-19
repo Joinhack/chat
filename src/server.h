@@ -29,8 +29,6 @@ typedef struct {
 
 void pong(cio *io);
 
-void pong(cio *io);
-
 void select_table(cio *io);
 
 void set_command(cio *io);
@@ -42,5 +40,7 @@ void del_command(cio *io);
 void info_command(cio *io);
 
 void dump_command(cio *io);
+
+void load_command(cio *io);
 
 #endif /**end define server*/

@@ -4,6 +4,7 @@
 #include <signal.h>
 #include "jmalloc.h"
 #include "cthread.h"
+#include "log.h"
 
 static cthread *cthread_create(cthr_pool *p);
 static void cthread_destroy(cthread  *thr);
@@ -12,18 +13,18 @@ void *thread_loop(void *data) {
 	cthread *thr = (cthread*)data;
 	cthr_pool *pool = thr->pool;
 	for(;;) {
-		if(pool->state == THRP_EXIT) {
-			thr->state = THR_EXIT;
-			return NULL;
-		}
 		pthread_mutex_lock(&pool->mutex);
 		thr->state = THR_IDLE;
 		if(pthread_cond_wait(&thr->cond, &pool->mutex) < 0) {
 			//TODO: log it.
-			fprintf(stderr, "wait error\n");
+			ERROR("wait error\n");
 			return NULL;
 		}
 		pthread_mutex_unlock(&pool->mutex);
+		if(pool->state == THRP_EXIT) {
+			thr->state = THR_EXIT;
+			return NULL;
+		}
 		thr->state = THR_BUSY;
 		if(thr->proc)
 			thr->proc(thr->proc_data);
@@ -36,16 +37,16 @@ static int cthread_init(cthread *thr, cthr_pool *pool) {
 	pthread_attr_t  thr_attr;
 	thr->pool = pool;
 	if(pthread_cond_init(&thr->cond, NULL) < 0) {
-		fprintf(stderr, "init thread cond error\n");
+		ERROR("init thread cond error\n");
 		return -1;
 	}
 	if(pthread_attr_init(&thr_attr) < 0) {
-		fprintf(stderr, "init thread attr error\n");
+		ERROR("init thread attr error\n");
 		return -1;
 	}
 	if(pthread_create(&thr->thrid, &thr_attr, thread_loop, thr) < 0) {
 		//TODO: log it.
-		fprintf(stderr, "create thread error\n");
+		ERROR("create thread error\n");
 		return -1;
 	}
 	return 0;
@@ -62,7 +63,7 @@ void cthr_pool_destroy(cthr_pool *pool) {
 		ret = pthread_cond_signal(&thr->cond);
 		pthread_mutex_unlock(&pool->mutex);
 		if(ret < 0) {
-			fprintf(stderr, "%s\n", strerror(errno));
+			ERROR("%s\n", strerror(errno));
 		}
 		pthread_join(thr->thrid, &thr_ret);
 		pthread_cond_destroy(&thr->cond);
@@ -80,7 +81,7 @@ cthr_pool *cthr_pool_create(size_t size) {
 	ret = pthread_mutex_init(&pool->mutex, NULL);
 	if(ret < 0) {
 		//TODO: log it.
-		fprintf(stderr, "create thread pool error\n");
+		ERROR("create thread pool error\n");
 		jfree(pool);
 		return NULL;
 	}
