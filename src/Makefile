@@ -1,6 +1,6 @@
-CC=gcc
-CFLAGS= -g -std=gnu99 -DUSE_TRACE
-LIBS = -lpthread 
+CC = gcc
+CFLAGS = -g -std=gnu99 -DUSE_TRACE
+LIBS = 
 
 .c.o:
 
