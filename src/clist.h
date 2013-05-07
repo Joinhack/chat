@@ -17,9 +17,10 @@ typedef struct {
 clist *clist_create();
 void clist_destroy(clist *cl);
 void *clist_rpop(clist *cl);
-void clist_lpush(clist *cl, void *data);
+clist_item* clist_lpush(clist *cl, void *data);
 void *clist_lpop(clist *cl);
-void clist_rpush(clist *cl, void *data);
+clist_item* clist_rpush(clist *cl, void *data);
+void clist_item_remove(clist *cl, clist_item *item);
 
 //return removed count.
 int clist_walk_remove(clist *cl, int (*cb)(void *, void *priv), void *priv);

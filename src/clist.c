@@ -4,6 +4,15 @@
 #include "jmalloc.h"
 #include "clist.h"
 
+#define REMOVE(cl, item) \
+if(--cl->count) { \
+	item->prev->next = item->next; \
+	item->next->prev = item->prev; \
+} else { \
+	cl->head = NULL; \
+} \
+clist_item_destroy(item)
+
 static clist_item *clist_item_create() {
 	clist_item *l_item;
 	size_t len = sizeof(struct clist_item);
@@ -30,15 +39,9 @@ clist *clist_create() {
 }
 
 
-#define POP(cl, item) \
-if(--cl->count) { \
-	item->prev->next = item->next; \
-	item->next->prev = item->prev; \
-} else { \
-	cl->head = NULL; \
-} \
-clist_item_destroy(item)
-
+void clist_item_remove(clist *cl, clist_item *item) {
+	REMOVE(cl, item);
+}
 
 void *clist_rpop(clist *cl) {
 	void *data;
@@ -48,7 +51,7 @@ void *clist_rpop(clist *cl) {
 	}
 	item = cl->head->prev;
 	data = item->data;
-	POP(cl, item);
+	REMOVE(cl, item);
 	return data;
 }
 
@@ -61,7 +64,7 @@ void *clist_lpop(clist *cl) {
 	item = cl->head;
 	data = item->data;
 	cl->head = item->next;
-	POP(cl, item);
+	REMOVE(cl, item);
 	return data;
 }
 
@@ -105,21 +108,23 @@ if(cl->head != NULL) { \
 	cl->head = item; \
 }
 
-void clist_lpush(clist *cl, void *data) {
+clist_item* clist_lpush(clist *cl, void *data) {
 	clist_item *item, *hprev;
 	item = clist_item_create();
 	item->data = data;
 	PUSH(cl, item);
 	cl->head = item;
 	cl->count++;
+	return item;
 }
 
-void clist_rpush(clist *cl, void *data) {
+clist_item* clist_rpush(clist *cl, void *data) {
 	clist_item *item, *hprev;
 	item = clist_item_create();
 	item->data = data;
 	PUSH(cl, item);
 	cl->count++;
+	return item;
 }
 
 void clist_destroy(clist *cl) {

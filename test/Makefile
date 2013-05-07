@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 INC = ../src
 OPTS = -g
 
@@ -30,6 +30,9 @@ db_test:
 
 common_test:
 	$(CC) -o $@ common_test.c  ../src/common.c -I$(INC)  $(OPTS)
+
+timer_test:
+	$(CC) -o $@ timer_test.c -lpthread -DTHREAD_TEST ../src/jmalloc.c ../src/timer.c ../src/spinlock.c ../src/clist.c -I$(INC) 
 
 clean: 
 	rm -rf *.dSYM $(TARGS)

@@ -164,6 +164,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 			evt = cevts->events + fired->fd;
 			if(!evt->mask)
 				continue;
+			if(evt->mask & CEV_TIMEOUT) fired->mask |= CEV_TIMEOUT;
 			if(evt->mask & CEV_PERSIST) {
 				fired->mask |= CEV_PERSIST;
 
