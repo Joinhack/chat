@@ -14,19 +14,14 @@ void cb(timer *t) {
 int main() {
 	timer_base* tb = timer_base_create();
 	printf("%llu\n", used_mem());
-	timer *tr;
-	for(int i = 0; i < 10000; i++) {
-		tr = timer_create(tb);
-		tr->expires = i;
-		tr->cb = cb;
-		timer_add(tb, tr);
-	}
-	printf("%llu\n", used_mem());
-	for(int i = 0; i < 10000; i++) {
-		timer_set_jiffies(tb, i);
-		timer_run(tb);
-	}
-	
+	timer *tr[2];
+	tr[0] = timer_create();
+	tr[1] = timer_create();
+	timer_add(tb, tr[0]);
+	timer_add(tb, tr[1]);
+	timer_remove(tr[0]);
+	timer_add(tb, tr[0]);
+
 	printf("%llu\n", used_mem());
 	timer_base_destroy(tb);
 	printf("%llu\n", used_mem());

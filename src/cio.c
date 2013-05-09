@@ -54,6 +54,7 @@ cio *cio_create() {
 	io->tabidx = 0;
 	io->bulk_len = 0;
 	io->nbulk = 0;
+	io->timeout_timer = timer_create();
 	io->reqtype = REQ_TYPE_NORMAL;
 	io->argv = NULL;
 	return io;
@@ -65,6 +66,10 @@ void cio_destroy(cio *io) {
 	cstr_destroy(io->wbuf);
 	for(i = 0; i < io->argc; i++) {
 		obj_decr(io->argv[i]);
+	}
+	if(io->timeout_timer != NULL) {
+		timer_remove(io->timeout_timer);
+		timer_destroy(io->timeout_timer);
 	}
 	if(io->argv != NULL) jfree(io->argv);
 	jfree(io);
@@ -78,6 +83,8 @@ void cio_clear(cio *io) {
 	for(i = 0; i < io->argc; i++) {
 		obj_decr(io->argv[i]);
 	}
+	if(io->timeout_timer != NULL)
+		timer_remove(io->timeout_timer);
 	if(io->argv != NULL) jfree(io->argv);
 	io->mask = 0;
 	io->reqtype = REQ_TYPE_NORMAL;

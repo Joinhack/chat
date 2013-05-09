@@ -3,6 +3,8 @@
 
 #include "cstr.h"
 #include "obj.h"
+#include "timer.h"
+
 
 #define IO_TCP 0x1
 #define IO_UN 0x1<<1
@@ -29,6 +31,7 @@ typedef struct {
 	obj **argv;
 	size_t argc;
 	int tabidx;
+	timer* timeout_timer;
 	void *priv;
 } cio;
 

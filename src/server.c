@@ -123,7 +123,6 @@ void del_command(cio *io) {
 void get_command(cio *io) {
 	server *svr = (server*)io->priv;
 	obj *o = db_get(svr->db, io->tabidx, io->argv[1]);
-	sleep(1);
 	if(o == NULL) {
 		reply_cstr(io, (cstr)shared.nullbulk->priv);
 		return;

@@ -4,6 +4,7 @@
 #include "common.h"
 #include "clist.h"
 #include "lock.h"
+#include "timer.h"
 
 #define MAX_EVENTS (10240*20)
 #define CEV_NONE 0x0
@@ -39,6 +40,7 @@ struct cevents {
 	long poll_sec;
 	int poll_ms;
 	char impl_name[64];
+	timer_base *timers;
 	void *priv_data; //use for implement data.
 };
 
@@ -49,6 +51,5 @@ int cevents_del_event(cevents *cevts, int fd, int mask);
 int cevents_poll(cevents *cevts, msec_t ms);
 void cevents_push_fired(cevents *cevts, cevent_fired *fired);
 int cevents_pop_fired(cevents *cevts, cevent_fired *fired);
-
 
 #endif /*end define cevent**/

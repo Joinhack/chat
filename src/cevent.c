@@ -56,6 +56,7 @@ cevents *cevents_create() {
 	cevents_create_priv_impl(evts);
 	evts->poll_sec = 0;
 	evts->poll_ms = 0;
+	evts->timers = timer_base_create();
 	return evts;
 }
 
@@ -68,10 +69,13 @@ void cevents_destroy(cevents *cevts) {
 		jfree(cevts->fired);
 	if(cevts->fired_queue != NULL)
 		clist_destroy(cevts->fired_queue);
+	if(cevts->timers != NULL)
+		timer_base_destroy(cevts->timers);
 	LOCK_DESTROY(&cevts->lock);
 	LOCK_DESTROY(&cevts->qlock);
 	cevts->events = NULL;
 	cevts->fired = NULL;
+	cevts->timers = NULL;
 	cevts->fired_queue = NULL;
 	cevents_destroy_priv_impl(cevts);
 	jfree(cevts);
@@ -158,6 +162,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 	rs = cevents_poll_impl(cevts, ms);
 	UNLOCK(&cevts->lock);
 	time_now(&cevts->poll_sec, &cevts->poll_ms);
+	timer_set_jiffies(cevts->timers, cevts->poll_sec*1000+cevts->poll_ms);
 	if(rs > 0) {
 		for(i = 0; i < rs; i++) {
 			fired = cevts->fired + i;
@@ -187,6 +192,7 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 			}
 		}
 	}
+	timer_run(cevts->timers);
 	//must sleep, let other thread grant the lock. maybe removed when the time event added.
 	usleep(2);
 	return count;

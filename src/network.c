@@ -22,6 +22,20 @@ void set_protocol_error(cio *io) {
 	io->flag |= IOF_CLOSE_AFTER_WRITE;
 }
 
+void timeout_check(timer *t) {
+	cio *io = (cio*)t->priv;
+	DEBUG("connection [%s:%d] timeout\n", io->ip, io->port);
+	cevents_add_event(((server*)io->priv)->evts, io->fd, CEV_TIMEOUT, NULL, io);
+}
+
+static inline void io_add_timeout(cio *io) {
+	cevents *cevts = ((server*)io->priv)->evts;
+	io->timeout_timer->cb = timeout_check;
+	io->timeout_timer->priv = io;
+	io->timeout_timer->expires = cevts->poll_sec*1000 + 1000;
+	timer_add(cevts->timers, io->timeout_timer);
+}
+
 //always return 0, don't push fired event queue
 int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	char buff[2048];
@@ -43,6 +57,8 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->fd = clifd;
 	io->type = IO_TCP;
 	io->priv = priv;
+
+	io_add_timeout(io);
 	install_read_event(cevts, io);
 	svr = (server*)priv;
 	atomic_add_uint32(&svr->connections, 1);
@@ -53,7 +69,7 @@ int cio_close_destroy(cevents *cevts, int fd, void *priv, int mask) {
 	server *svr;
 	cio *io = (cio*)priv;
 	DEBUG("client[%d] %s:%d closed\n", fd, io->ip, io->port);
-	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);	
+	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST|CEV_TIMEOUT);	
 	svr = (server*)io->priv;
 	atomic_sub_uint32(&svr->connections, 1);
 	close(io->fd);
@@ -99,6 +115,7 @@ int response(cio *io) {
 		install_read_event(cevts, io);
 		return 0;
 	}
+	io_add_timeout(io);
 	return 0;
 }
 
@@ -196,6 +213,10 @@ int reply_err(cio *io, const char *err) {
 int write_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	int rs;
 	cio *io = (cio*)priv;
+	if(mask & CEV_TIMEOUT) {
+		cio_close_destroy_install(io);
+		return -1;
+	}
 	io->mask = mask;
 	return response(io);
 }
@@ -348,6 +369,13 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
 	int rs, persist = (mask & CEV_PERSIST);
 	io->mask = mask;
+	if(mask & CEV_TIMEOUT) {
+		cio_close_destroy_install(io);
+		return -1;
+	}
+	if(io->timeout_timer)
+		timer_remove(io->timeout_timer);
+
 	rs = _read_process(io);
 	if(!persist && rs == 1) {
 		install_read_event(cevts, io);
