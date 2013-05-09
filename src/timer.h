@@ -11,6 +11,7 @@ typedef struct timer{
 	clist *vec;
 	void (*cb)(struct timer *timer);
 	timer_base *base;
+	void *priv;
 } timer;
 
 timer_base* timer_base_create();
@@ -21,7 +22,7 @@ void timer_remove(timer *t);
 
 void timer_add(timer_base *base, timer *t);
 
-timer* timer_create(timer_base *base);
+timer* timer_create();
 
 void timer_destroy(timer* t);
 

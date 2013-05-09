@@ -89,12 +89,17 @@ static void remove_timer_inner(timer *timer) {
 void timer_remove(timer *t) {
 	timer_base *base = t->base;
 	spinlock_lock(&base->lock);
+	if(t->item == NULL || t->vec == NULL) {
+		spinlock_unlock(&base->lock);
+		return;
+	}
 	remove_timer_inner(t);
 	spinlock_unlock(&base->lock);
 }
 
 void timer_add(timer_base *base, timer *t) {
 	spinlock_lock(&base->lock);
+	t->base = base;
 	add_timer_inner(base, t);
 	spinlock_unlock(&base->lock);
 }
@@ -118,12 +123,11 @@ static inline int cascade_walk_cb(void *data, void *priv) {
 }
 
 static int cascade(struct timer_base *base, clist **tv, int index) {
-	clist *list = tv[index];
-	if(clist_len(list) == 0)
+	clist list;
+	if(clist_len(tv[index]) == 0)
 		return index;
-	tv[index] = clist_create();
-	clist_walk_remove(list, cascade_walk_cb, base);
-	clist_destroy(list);
+	clist_move(tv[index], &list);
+	clist_walk_remove(&list, cascade_walk_cb, base);
 	return index;
 }
 
@@ -142,7 +146,7 @@ static inline int runner_walk_cb(void *data, void *priv) {
 }
 
 static inline void run_timers_inner(timer_base *base) {
-	clist *list;
+	clist list;
 	spinlock_lock(&base->lock);
 	int index = base->timer_jiffies & TVR_MASK;
 	if (!index &&
@@ -150,11 +154,9 @@ static inline void run_timers_inner(timer_base *base) {
 				(!cascade(base, base->tv3, INDEX(1))) &&
 					!cascade(base, base->tv4, INDEX(2)))
 						cascade(base, base->tv5, INDEX(3));
-	list = base->tv1[index];
-	if(clist_len(list) > 0) {
-		base->tv1[index] = clist_create();
-		clist_walk_remove(list, runner_walk_cb, base);
-		clist_destroy(list);
+	if(clist_len(base->tv1[index]) > 0) {
+		clist_move(base->tv1[index], &list);
+		clist_walk_remove(&list, runner_walk_cb, base);
 	}
 	spinlock_unlock(&base->lock);
 }
@@ -163,11 +165,10 @@ void timer_run(timer_base *base) {
 	run_timers_inner(base);
 }
 
-timer* timer_create(timer_base *base) {
+timer* timer_create() {
 	size_t s = sizeof(timer);
 	timer *t = jmalloc(s);
 	memset(t, 0, s);
-	t->base = base;
 	return t;
 }
 

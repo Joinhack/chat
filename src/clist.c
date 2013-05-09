@@ -40,6 +40,8 @@ clist *clist_create() {
 
 
 void clist_item_remove(clist *cl, clist_item *item) {
+	if(item == cl->head)
+		cl->head = item->next;
 	REMOVE(cl, item);
 }
 
@@ -132,4 +134,11 @@ void clist_destroy(clist *cl) {
 		clist_rpop(cl);
 	}
 	jfree(cl);
+}
+
+void clist_move(clist *sl, clist *dl) {
+	dl->head = sl->head;
+	dl->count = sl->count;
+	sl->head = NULL;
+	sl->count = 0;
 }
