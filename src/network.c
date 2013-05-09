@@ -79,8 +79,8 @@ int cio_close_destroy(cevents *cevts, int fd, void *priv, int mask) {
 
 static void cio_close_destroy_install(cio *io) {
 	cevents *cevts = ((server*)io->priv)->evts;
+	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST|CEV_TIMEOUT);
 	cevents_add_event(cevts, io->fd, CEV_WRITE|CEV_PERSIST,cio_close_destroy, io);
-	cevents_del_event(cevts, io->fd, CEV_READ);
 }
 
 int response(cio *io) {
