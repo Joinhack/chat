@@ -55,6 +55,7 @@ cio *cio_create() {
 	io->bulk_len = 0;
 	io->nbulk = 0;
 	io->timeout_timer = timer_create();
+	io->handler_count = 0;
 	io->reqtype = REQ_TYPE_NORMAL;
 	io->argv = NULL;
 	return io;

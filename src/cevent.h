@@ -23,6 +23,7 @@ typedef struct {
 	event_proc *read_proc;
 	event_proc *write_proc;
 	void *priv;
+	clist *fired_queue;
 } cevent;
 
 typedef struct {
@@ -33,8 +34,7 @@ typedef struct {
 struct cevents {
 	int maxfd;
 	cevent *events; //should be MAX_EVENTS
-	cevent_fired *fired; //should be MAX_EVENTS, push to top level
-	clist *fired_queue;
+	clist *fired_fds; //should be MAX_EVENTS, push to top level
 	LOCK_T qlock;
 	LOCK_T lock;
 	long poll_sec;
@@ -51,5 +51,6 @@ int cevents_del_event(cevents *cevts, int fd, int mask);
 int cevents_poll(cevents *cevts, msec_t ms);
 void cevents_push_fired(cevents *cevts, cevent_fired *fired);
 int cevents_pop_fired(cevents *cevts, cevent_fired *fired);
+int cevents_clear_fired_events(cevents *cevts, int fd);
 
 #endif /*end define cevent**/

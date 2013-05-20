@@ -16,6 +16,7 @@ static int cevents_del_event_impl(cevents *cevts, int fd, int mask);
 static int cevents_poll_impl(cevents *cevts, msec_t ms);
 static int cevents_enable_event_impl(cevents *cevts, int fd, int mask);
 static int cevents_disable_event_impl(cevents *cevts, int fd, int mask);
+static int fired_preproc(cevents *cevts, cevent_fired *fired, int *count);
 
 #ifdef USE_EPOLL
 #include "cevent_epoll.c"
@@ -27,14 +28,35 @@ static int cevents_disable_event_impl(cevents *cevts, int fd, int mask);
 
 void cevents_push_fired(cevents *cevts, cevent_fired *fired) {
 	LOCK(&cevts->qlock);
-	clist_lpush(cevts->fired_queue, (void*)fired);
+	clist_lpush(cevts->events[fired->fd].fired_queue, (void*)fired);
+	int *fd = jmalloc(sizeof(int));
+	*fd = fired->fd;
+	clist_lpush(cevts->fired_fds, (void*)fd);
 	UNLOCK(&cevts->qlock);
+}
+
+static int fired_event_destroy(void *d, void *p) {
+	jfree(d);
+	return 0;
+}
+
+int cevents_clear_fired_events(cevents *cevts, int fd) {
+	LOCK(&cevts->qlock);
+	clist_walk_remove(cevts->events[fd].fired_queue, fired_event_destroy, NULL);
+	UNLOCK(&cevts->qlock);
+	return 0;
 }
 
 int cevents_pop_fired(cevents *cevts, cevent_fired *fired) {
 	cevent_fired *fevt;
 	LOCK(&cevts->qlock);
-	fevt = (cevent_fired*)clist_rpop(cevts->fired_queue);
+	int *fd = (int*)clist_rpop(cevts->fired_fds);
+	if(fd == NULL) {
+		UNLOCK(&cevts->qlock);
+		return 0;
+	}
+	fevt = (cevent_fired*)clist_rpop(cevts->events[*fd].fired_queue);
+	jfree(fd);
 	UNLOCK(&cevts->qlock);
 	if(fevt == NULL) return 0;
 	*fired = *fevt;
@@ -49,8 +71,11 @@ cevents *cevents_create() {
 	evts = (cevents *)jmalloc(len);
 	memset((void *)evts, len, 0);
 	evts->events = jmalloc(sizeof(cevent) * MAX_EVENTS);
-	evts->fired = jmalloc(sizeof(cevent_fired) * MAX_EVENTS);
-	evts->fired_queue = clist_create();
+	evts->fired_fds = jmalloc(sizeof(int) * MAX_EVENTS);
+	for(size_t i = 0; i < MAX_EVENTS; i++) {
+		evts->events[i].fired_queue = clist_create();
+	}
+	evts->fired_fds = clist_create();
 	LOCK_INIT(&evts->qlock);
 	LOCK_INIT(&evts->lock);
 	cevents_create_priv_impl(evts);
@@ -63,20 +88,23 @@ cevents *cevents_create() {
 void cevents_destroy(cevents *cevts) {
 	if(cevts == NULL)
 		return;
-	if(cevts->events != NULL)
+	if(cevts->events != NULL) {
+		for(size_t i = 0; i < MAX_EVENTS; i++) {
+			cevents_clear_fired_events(cevts, i);
+			clist_destroy(cevts->events[i].fired_queue);
+		}
 		jfree(cevts->events);
-	if(cevts->fired != NULL)
-		jfree(cevts->fired);
-	if(cevts->fired_queue != NULL)
-		clist_destroy(cevts->fired_queue);
+	}
+	if(cevts->fired_fds != NULL)
+		clist_destroy(cevts->fired_fds);
 	if(cevts->timers != NULL)
 		timer_base_destroy(cevts->timers);
 	LOCK_DESTROY(&cevts->lock);
 	LOCK_DESTROY(&cevts->qlock);
 	cevts->events = NULL;
-	cevts->fired = NULL;
+	cevts->fired_fds = NULL;
 	cevts->timers = NULL;
-	cevts->fired_queue = NULL;
+	//cevts->fired_queue = NULL;
 	cevents_destroy_priv_impl(cevts);
 	jfree(cevts);
 }
@@ -142,11 +170,44 @@ int cevents_del_event(cevents *cevts, int fd, int mask) {
 	return rs;
 }
 
-static cevent_fired *clone_cevent_fired(cevents *cevts, cevent_fired *fired) {
-	cevent *cevent = cevts->events + fired->fd;
+static cevent_fired *clone_cevent_fired(cevent_fired *fired) {
 	cevent_fired *new_cevent_fired = jmalloc(sizeof(cevent_fired));
 	*new_cevent_fired = *fired;
 	return new_cevent_fired;
+}
+
+static int fired_preproc(cevents *cevts, cevent_fired *fired, int *count) {
+	cevent *evt = cevts->events + fired->fd;
+	if(!evt->mask) {
+		return 1;
+	}
+	if(evt->mask & CEV_TIMEOUT) fired->mask |= CEV_TIMEOUT;
+	if(evt->mask & CEV_PERSIST) {
+		fired->mask |= CEV_PERSIST;
+
+		if(evt->mask && (fired->mask & CEV_READ)) {
+			//just send read event to event queue.
+			UNLOCK(&cevts->lock);
+			if(evt->read_proc(cevts, fired->fd, evt->priv, fired->mask) == 0) {
+				cevents_push_fired(cevts, clone_cevent_fired(fired));
+				(*count)++;
+			}
+			LOCK(&cevts->lock);
+		}
+		if(evt->mask && (fired->mask & CEV_WRITE)) {
+			UNLOCK(&cevts->lock);
+			evt->write_proc(cevts, fired->fd, evt->priv, fired->mask);
+			LOCK(&cevts->lock);
+		}
+	} else {
+		UNLOCK(&cevts->lock);
+		//unbind the events.
+		cevents_del_event(cevts, fired->fd, fired->mask);
+		LOCK(&cevts->lock);
+		cevents_push_fired(cevts, clone_cevent_fired(fired));
+		(*count)++;
+	}
+	return 0;
 }
 
 //return push queue count or J_ERR
@@ -159,39 +220,10 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 		abort();
 	}
 	LOCK(&cevts->lock);
-	rs = cevents_poll_impl(cevts, ms);
+	count = cevents_poll_impl(cevts, ms);
 	UNLOCK(&cevts->lock);
 	time_now(&cevts->poll_sec, &cevts->poll_ms);
 	timer_set_jiffies(cevts->timers, cevts->poll_sec*1000+cevts->poll_ms);
-	if(rs > 0) {
-		for(i = 0; i < rs; i++) {
-			fired = cevts->fired + i;
-			evt = cevts->events + fired->fd;
-			if(!evt->mask)
-				continue;
-			if(evt->mask & CEV_TIMEOUT) fired->mask |= CEV_TIMEOUT;
-			if(evt->mask & CEV_PERSIST) {
-				fired->mask |= CEV_PERSIST;
-
-				if(evt->mask && (fired->mask & CEV_READ)) {
-					//just send read event to event queue.
-					if(evt->read_proc(cevts, fired->fd, evt->priv, fired->mask) == 0) {
-						//cevents_del_event(cevts, fired->fd, CEV_READ);
-						cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
-						count++;
-					}
-				}
-				if(evt->mask && (fired->mask & CEV_WRITE)) {
-					evt->write_proc(cevts, fired->fd, evt->priv, fired->mask);
-				}
-			} else {
-				//unbind the events.
-				cevents_del_event(cevts, fired->fd, fired->mask);
-				cevents_push_fired(cevts, clone_cevent_fired(cevts, fired));
-				count++;
-			}
-		}
-	}
 	timer_run(cevts->timers);
 	//must sleep, let other thread grant the lock. maybe removed when the time event added.
 	usleep(2);

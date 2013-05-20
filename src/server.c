@@ -123,6 +123,7 @@ void del_command(cio *io) {
 void get_command(cio *io) {
 	server *svr = (server*)io->priv;
 	obj *o = db_get(svr->db, io->tabidx, io->argv[1]);
+	sleep(1);
 	if(o == NULL) {
 		reply_cstr(io, (cstr)shared.nullbulk->priv);
 		return;
@@ -208,8 +209,9 @@ void *process_event(void *priv) {
 		if(cevents_pop_fired(cevts, &fired) == 0)
 			return NULL;
 		evt = cevts->events + fired.fd;
+		cio *io = (cio*)evt->priv;
+		atomic_add_uint32(&io->handler_count, 1);
 		if(fired.mask & CEV_PERSIST) {
-			cio *io = (cio*)evt->priv;
 			io->mask = fired.mask;
 			process_commond(io);
 		} else {
@@ -220,6 +222,7 @@ void *process_event(void *priv) {
 				evt->write_proc(cevts, fired.fd, evt->priv, fired.mask);
 			}
 		}
+		atomic_sub_uint32(&io->handler_count, 1);
 	}
 	return NULL;
 }

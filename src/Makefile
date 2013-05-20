@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 CFLAGS = -g -std=gnu99 -DUSE_TRACE
 LIBS = 
 

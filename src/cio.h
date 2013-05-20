@@ -32,6 +32,7 @@ typedef struct {
 	size_t argc;
 	int tabidx;
 	timer* timeout_timer;
+	uint32_t handler_count;
 	void *priv;
 } cio;
 
