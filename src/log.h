@@ -10,9 +10,17 @@ enum LOG_LEVEL {
 	LEVEL_ERR
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void log_init(int fd);
 
 void log_print(int level, char *fmt, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #define ERROR(fmt, ...) log_print(LEVEL_ERR, fmt, ##__VA_ARGS__)
 

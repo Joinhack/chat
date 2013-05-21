@@ -23,7 +23,11 @@ static inline void _item_add(clist_item *n, clist_item *prev, clist_item *next) 
 	prev->next = n;
 }
 
-#define LIST_EMPTY(l) (l->next == l) 
+#define LIST_EMPTY(l) (l->next == l)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 clist *clist_create();
 void clist_destroy(clist *cl);
@@ -36,5 +40,9 @@ void clist_move(clist *sl, clist *dl);
 
 //return removed count.
 int clist_walk_remove(clist *cl, int (*cb)(void *, void *priv), void *priv);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* end define common list **/

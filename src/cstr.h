@@ -5,6 +5,10 @@
 
 #define cstr char *
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 cstr cstr_create(size_t len);
 cstr cstr_new(const char *c, size_t len);
 void cstr_destroy(cstr s);
@@ -15,6 +19,10 @@ void cstr_clear(cstr s);
 void cstr_tolower(cstr s);
 void cstr_toupper(cstr s);
 cstr cstr_range(cstr s, int b, int e);
+
+#ifdef __cplusplus
+}
+#endif
 
 typedef struct {
     uint32_t len;

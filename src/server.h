@@ -27,6 +27,10 @@ typedef struct {
 	db *db;
 } server;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void pong(cio *io);
 
 void select_table(cio *io);
@@ -42,5 +46,9 @@ void info_command(cio *io);
 void dump_command(cio *io);
 
 void load_command(cio *io);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /**end define server*/

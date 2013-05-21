@@ -10,8 +10,14 @@
 typedef uint32_t spinlock_t;
 
 #ifndef CINLINE
+#ifdef __cplusplus
+extern "C" {
+#endif
 void spinlock_trylock(spinlock_t *lock);
 void spinlock_unlock(spinlock_t *lock);
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 void spinlock_lock(spinlock_t *lock);

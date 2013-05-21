@@ -11,6 +11,15 @@ void time_now(long *s, int *ms) {
 	*ms = now.tv_usec/1000;
 }
 
+long get_jiffies() {
+	long l;
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	l = now.tv_sec * 1000;
+	l += now.tv_usec;
+	return l;
+}
+
 int str2ll(char *p, size_t len, long long *l) {
 	unsigned long long v = 0;
 	char *ptr = p, c;

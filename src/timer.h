@@ -13,6 +13,10 @@ typedef struct timer{
 	void *priv;
 } timer;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 timer_base* timer_base_create();
 
 void timer_base_destroy(timer_base* tb);
@@ -28,5 +32,9 @@ void timer_destroy(timer* t);
 void timer_run(timer_base *base);
 
 void timer_set_jiffies(timer_base *b, uint64_t j);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -31,7 +31,7 @@ db_test:../src/dict.c ../src/cstr.c ../src/db.c ../src/spinlock.c ../src/obj.c .
 common_test: ../src/common.c
 	$(CC) -o $@ common_test.c $^  -I$(INC)  $(OPTS)
 
-timer_test: ../src/jmalloc.c ../src/log.c ../src/timer.c ../src/spinlock.c ../src/clist.c
+timer_test: ../src/jmalloc.c ../src/log.c ../src/timer.c ../src/spinlock.c ../src/clist.c ../src/common.c
 	$(CC) -o $@ timer_test.c -lpthread -DTHREAD_TEST $^ -I$(INC) $(OPTS)
 
 clean: 
