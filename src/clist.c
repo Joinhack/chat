@@ -4,13 +4,8 @@
 #include "jmalloc.h"
 #include "clist.h"
 
-#define REMOVE(cl, item) \
-if(--cl->count) { \
-	item->prev->next = item->next; \
-	item->next->prev = item->prev; \
-} else { \
-	cl->head = NULL; \
-} \
+#define REMOVE(item) \
+_item_remove(item);\
 clist_item_destroy(item)
 
 static clist_item *clist_item_create() {
@@ -19,9 +14,8 @@ static clist_item *clist_item_create() {
 	l_item = jmalloc(len);
 	if(l_item == NULL)
 		return NULL;
-	l_item->next = NULL;
-	l_item->prev = NULL;
-	l_item->data = NULL;
+	l_item->next = l_item;
+	l_item->prev = l_item;
 	return l_item;
 }
 
@@ -30,93 +24,56 @@ static void clist_item_destroy(clist_item *item) {
 }
 
 clist *clist_create() {
-	clist *cl;
-	size_t len = sizeof(clist);
-	cl = jmalloc(len);
-	cl->head = NULL;
-	cl->count = 0;
+	clist *cl = clist_item_create();
 	return cl;
 }
 
 
-void clist_item_remove(clist *cl, clist_item *item) {
-	if(item == cl->head)
-		cl->head = item->next;
-	REMOVE(cl, item);
+void clist_item_remove(clist_item *item) {
+	REMOVE(item);
 }
 
 void *clist_rpop(clist *cl) {
 	void *data;
 	clist_item *item;
-	if(cl->count == 0) {
+	if(LIST_EMPTY(cl))
 		return NULL;
-	}
-	item = cl->head->prev;
+	item = cl->prev;
 	data = item->data;
-	REMOVE(cl, item);
+	REMOVE(item);
 	return data;
 }
 
 void *clist_lpop(clist *cl) {
 	void *data;
 	clist_item *item;
-	if(cl->count == 0) {
+	if(LIST_EMPTY(cl))
 		return NULL;
-	}
-	item = cl->head;
+	item = cl->next;
 	data = item->data;
-	cl->head = item->next;
-	REMOVE(cl, item);
+	REMOVE(item);
 	return data;
 }
 
 int clist_walk_remove(clist *cl, int (*cb)(void *, void *priv), void *priv) {
-	int count = 0;
-	clist_item *item, *next;
-	item = cl->head;
-	while(item != NULL || cl->count != count) {
+	int count = 0, c;
+	clist_item *item;
+	item = cl;
+	while(!LIST_EMPTY(cl)) {
+		item = item->next;
 		if(!cb(item->data, priv)) {
-			next = item->next;
-			if(--cl->count) {
-				item->prev->next = next;
-				next->prev = item->prev;
-			} else {
-				cl->head = NULL;
-			}
+			REMOVE(item);
 			count++;
-			if(next == item) {
-				clist_item_destroy(item);
-				break;
-			}
-			clist_item_destroy(item);
-		} else {
-			next = item->next;
 		}
-		item = next;
 	}
 	return count;
-}
-
-#define PUSH(cl, item) \
-if(cl->head != NULL) { \
-	hprev = cl->head->prev; \
-	item->next = cl->head; \
-	item->prev = hprev; \
-	cl->head->prev = item; \
-	hprev->next = item; \
-} else { \
-	item->prev = item; \
-	item->next = item; \
-	cl->head = item; \
 }
 
 clist_item* clist_lpush(clist *cl, void *data) {
 	clist_item *item, *hprev;
 	item = clist_item_create();
 	item->data = data;
-	PUSH(cl, item);
-	cl->head = item;
-	cl->count++;
+	_item_add(item, cl, cl->next);
 	return item;
 }
 
@@ -124,21 +81,23 @@ clist_item* clist_rpush(clist *cl, void *data) {
 	clist_item *item, *hprev;
 	item = clist_item_create();
 	item->data = data;
-	PUSH(cl, item);
-	cl->count++;
+	_item_add(item, cl->prev, cl);
 	return item;
 }
 
 void clist_destroy(clist *cl) {
-	while(cl->count > 0) {
+	while(!LIST_EMPTY(cl)) {
 		clist_rpop(cl);
 	}
 	jfree(cl);
 }
 
 void clist_move(clist *sl, clist *dl) {
-	dl->head = sl->head;
-	dl->count = sl->count;
-	sl->head = NULL;
-	sl->count = 0;
+	dl->next = sl->next;
+	dl->next->prev = dl;
+	dl->prev = sl->prev;
+	dl->prev->next = dl;
+
+	sl->next = sl;
+	sl->prev = sl;
 }

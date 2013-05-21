@@ -81,7 +81,7 @@ static void add_timer_inner(struct timer_base *base, timer *timer) {
 }
 
 static void remove_timer_inner(timer *timer) {
-	clist_item_remove(timer->vec, timer->item);
+	clist_item_remove(timer->item);
 	timer->item = NULL;
 	timer->vec = NULL;
 }
@@ -124,7 +124,7 @@ static inline int cascade_walk_cb(void *data, void *priv) {
 
 static int cascade(struct timer_base *base, clist **tv, int index) {
 	clist list;
-	if(clist_len(tv[index]) == 0)
+	if(LIST_EMPTY(tv[index]))
 		return index;
 	clist_move(tv[index], &list);
 	clist_walk_remove(&list, cascade_walk_cb, base);
@@ -154,7 +154,7 @@ static inline void run_timers_inner(timer_base *base) {
 				(!cascade(base, base->tv3, INDEX(1))) &&
 					!cascade(base, base->tv4, INDEX(2)))
 						cascade(base, base->tv5, INDEX(3));
-	if(clist_len(base->tv1[index]) > 0) {
+	if(!LIST_EMPTY(base->tv1[index])) {
 		clist_move(base->tv1[index], &list);
 		clist_walk_remove(&list, runner_walk_cb, base);
 	}
