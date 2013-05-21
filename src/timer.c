@@ -77,19 +77,17 @@ static void add_timer_inner(struct timer_base *base, timer *timer) {
 	* Timers are FIFO:
 	*/
 	timer->item = clist_rpush(vec, timer);
-	timer->vec = vec;
 }
 
 static void remove_timer_inner(timer *timer) {
 	clist_item_remove(timer->item);
 	timer->item = NULL;
-	timer->vec = NULL;
 }
 
 void timer_remove(timer *t) {
 	timer_base *base = t->base;
 	spinlock_lock(&base->lock);
-	if(t->item == NULL || t->vec == NULL) {
+	if(t->item == NULL) {
 		spinlock_unlock(&base->lock);
 		return;
 	}
@@ -137,7 +135,6 @@ static inline int runner_walk_cb(void *data, void *priv) {
 	timer *timer = (struct timer*)data;
 	timer_base *base = (timer_base *)priv;
 	timer->item = NULL;
-	timer->vec = NULL;
 	spinlock_unlock(&base->lock);
 	if(timer->cb) 
 		timer->cb(timer);
@@ -174,7 +171,7 @@ timer* timer_create() {
 
 void timer_destroy(timer* t) {
 	timer_base *base = t->base;
-	if(t->item != NULL && t->vec != NULL)
+	if(t->item != NULL)
 		timer_remove(t);
 	jfree(t);
 }

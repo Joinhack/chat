@@ -28,6 +28,8 @@ int main() {
 		timer_run(tb);
 	}
 
+	timer_destroy(tr[0]);
+	timer_destroy(tr[1]);
 	printf("%llu\n", used_mem());
 	timer_base_destroy(tb);
 	printf("%llu\n", used_mem());

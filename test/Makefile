@@ -7,7 +7,7 @@ TARGS=cstr_test cnet_test cthread_test jmalloc_test clist_test dict_test common_
 
 all: $(TARGS)
 
-cnet_test:../src/cnet.c ../src/cio.c ../src/cstr.c ../src/obj.c ../src/dict.c ../src/spinlock.c ../src/jmalloc.c
+cnet_test:../src/cnet.c ../src/cio.c ../src/cstr.c ../src/obj.c ../src/dict.c ../src/spinlock.c ../src/jmalloc.c ../src/timer.c ../src/clist.c
 	$(CC) -o $@ cnet_test.c $^ -I$(INC) $(OPTS)
 
 cstr_test:

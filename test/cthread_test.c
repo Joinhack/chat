@@ -18,7 +18,7 @@ void *print_test(void *d) {
 		spinlock_lock(&datap->lock);
 		clist_rpop(datap->cq);	
 		spinlock_unlock(&datap->lock);
-		if(clist_len(datap->cq) == 0)
+		if(LIST_EMPTY(datap->cq))
 			break;
 	}
 	return NULL;

@@ -8,7 +8,6 @@ typedef struct timer_base timer_base;
 typedef struct timer{
 	uint64_t expires;
 	clist_item *item;
-	clist *vec;
 	void (*cb)(struct timer *timer);
 	timer_base *base;
 	void *priv;
