@@ -134,6 +134,7 @@ cstr load_cstr(int fd) {
 		ptr += rn;
 		count += rn;
 	}
+	CSTR_HDR(s)->free = len - count;
 	return s;
 }
 
