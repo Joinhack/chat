@@ -134,6 +134,7 @@ cstr load_cstr(int fd) {
 		ptr += rn;
 		count += rn;
 	}
+	//make cstr free 
 	CSTR_HDR(s)->free = len - count;
 	return s;
 }
@@ -174,9 +175,9 @@ int dump_load(server *svr) {
 				ERROR("the table index is bigger, load error\n");
 				return -1;
 			}
+			if((type = load_type(fd)) < 0) goto err;
+			if(type == TYPE_END) break;
 		}
-		if((type = load_type(fd)) < 0) goto err;
-		if(type == TYPE_END) break;
 
 		key = load_obj(fd, TYPE_CSTR);
 		if(key == NULL) goto err;
