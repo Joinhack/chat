@@ -62,26 +62,27 @@ dict_opts db_opts = {
 	db_value_destroy,
 };
 
-db* db_create(size_t s) {
+db* db_create(int s) {
 	size_t i;
-	db *db = jmalloc(s);
+	db *db = jmalloc(sizeof(struct db));
+	db->table_size = s;
 	db->tables = jmalloc(sizeof(struct dict*)*s);
 	db->locks = jmalloc(sizeof(LOCK_T)*s);
 	for(i = 0; i < s; i++) {
 		db->tables[i] = dict_create(&db_opts);
 		LOCK_INIT(&db->locks[i]);
 	}
-	db->table_size = s;
 	return db;
 }
 
 int db_set(db *db, size_t tabidx, obj *k, obj *v) {
 	dict *d;
 	int rs;
-	d = db->tables[tabidx];
+	d = db->tables[0];
 	LOCK(&db->locks[tabidx]);
-	dict_replace(d, k, v);
+	rs = dict_replace(d, k, v);
 	UNLOCK(&db->locks[tabidx]);
+	return rs;
 }
 
 int db_remove(db *db, size_t tabidx, obj *k) {
