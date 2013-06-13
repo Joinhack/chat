@@ -15,7 +15,7 @@ typedef struct db {
 extern "C" {
 #endif
 
-db* db_create(size_t s);
+db* db_create(int s);
 
 void db_destroy(db* db);
 

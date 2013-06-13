@@ -17,7 +17,7 @@ static int try_process_command(cio *io);
 void cio_close_destroy(cio *io);
 
 static void install_read_event(cevents *cevts, cio *io) {
-	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
 }
 
 void set_protocol_error(cio *io) {
@@ -37,7 +37,7 @@ static inline void io_add_timeout(cio *io) {
 	cevents *cevts = ((server*)io->priv)->evts;
 	io->timeout_timer->cb = io_timeout_cb;
 	io->timeout_timer->priv = io;
-	io->timeout_timer->expires = cevts->poll_sec*1000 + 200;
+	io->timeout_timer->expires = cevts->poll_sec*1000 + 5000;
 	timer_add(cevts->timers, io->timeout_timer);
 }
 

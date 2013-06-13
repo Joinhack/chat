@@ -51,6 +51,7 @@ int dump_obj_type(int fd, obj *o) {
 	if(o->type == OBJ_TYPE_STR) {
 		return dump_type(fd, TYPE_CSTR);
 	}
+	return -1;
 }
 
 int dump_save(server *svr) {
@@ -173,14 +174,20 @@ int dump_load(server *svr) {
 				return -1;
 			}
 		}
+		if((type = load_type(fd)) < 0) goto err;
+		if(type == TYPE_END) break;
+
 		key = load_obj(fd, TYPE_CSTR);
-		o = load_obj(fd, type);
 		if(key == NULL) goto err;
+		o = load_obj(fd, type);
 		if(o == NULL) {
 			obj_decr(key);
 			goto err;
 		}
+		obj_incr(o);
 		db_set(db, tabidx, key, o);
+		obj_decr(key);
+		obj_decr(o);
 	}
 	close(fd);
 	return 0;

@@ -123,7 +123,6 @@ void del_command(cio *io) {
 void get_command(cio *io) {
 	server *svr = (server*)io->priv;
 	obj *o = db_get(svr->db, io->tabidx, io->argv[1]);
-	sleep(1);
 	if(o == NULL) {
 		reply_cstr(io, (cstr)shared.nullbulk->priv);
 		return;
@@ -277,8 +276,7 @@ static server *create_server() {
 	INFO("server used %s for event\n", svr->evts->impl_name);
 	svr->last_info_time = 0;
 
-	svr->db = db_create(16);
-
+	svr->db = db_create(1);
 	svr->in_fd = create_tcp_server();
 	if(svr->in_fd < 0) {
 		destroy_server(svr);
