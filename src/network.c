@@ -37,7 +37,7 @@ static inline void io_add_timeout(cio *io) {
 	cevents *cevts = ((server*)io->priv)->evts;
 	io->timeout_timer->cb = io_timeout_cb;
 	io->timeout_timer->priv = io;
-	io->timeout_timer->expires = cevts->poll_sec*1000 + 5000;
+	io->timeout_timer->expires = cevts->poll_sec*1000 + 700;
 	timer_add(cevts->timers, io->timeout_timer);
 }
 
@@ -73,6 +73,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 void cio_close_destroy_if_nessary(cio *io) {
 	cevents *cevts = ((server*)io->priv)->evts;
 	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);
+	cevents_clear_fired_events(cevts, io->fd);
 	if(io->handler_count == 0) {
 		cio_close_destroy(io);
 	} else {
@@ -92,7 +93,6 @@ void cio_close_destroy(cio *io) {
 	svr = (server*)io->priv;
 	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST|CEV_TIMEOUT);	
 	atomic_sub_uint32(&svr->connections, 1);
-	cevents_clear_fired_events(cevts, io->fd);
 	close(io->fd);
 	cio_destroy(io);
 }
