@@ -4,7 +4,7 @@
 #include <string.h>
 #include "jmalloc.h"
 #include "spinlock.h"
-#include "timer.h"
+#include "ctimer.h"
 
 
 #define TVN_BITS 6
@@ -15,9 +15,9 @@
 #define TVR_MASK (TVR_SIZE - 1)
 
 
-struct timer_base {
+struct ctimer_base {
 	spinlock_t lock;
-	volatile uint64_t timer_jiffies;
+	volatile uint64_t ctimer_jiffies;
 	clist** tv1;
 	clist** tv2;
 	clist** tv3;
@@ -25,8 +25,8 @@ struct timer_base {
 	clist** tv5;
 };
 
-void timer_set_jiffies(timer_base *b, uint64_t j) {
-	b->timer_jiffies = j;
+void ctimer_set_jiffies(ctimer_base *b, uint64_t j) {
+	b->ctimer_jiffies = j;
 }
 
 static clist** tv_init(size_t s) {
@@ -46,9 +46,9 @@ static void tv_destroy(clist** l,size_t s) {
 	jfree(l);
 }
 
-static void add_timer_inner(struct timer_base *base, timer *timer) {
-	uint64_t expires = timer->expires;
-	size_t idx = expires - base->timer_jiffies;
+static void add_ctimer_inner(struct ctimer_base *base, ctimer *ctimer) {
+	uint64_t expires = ctimer->expires;
+	size_t idx = expires - base->ctimer_jiffies;
 	clist *vec;
 	if (idx < TVR_SIZE) {
 		int i = expires & TVR_MASK;
@@ -63,49 +63,49 @@ static void add_timer_inner(struct timer_base *base, timer *timer) {
 		int i = (expires >> (TVR_BITS + 2 * TVN_BITS)) & TVN_MASK;
 		vec = base->tv4[i];
 	} else if ((int64_t) idx < 0) {
-		vec = base->tv1[(base->timer_jiffies & TVR_MASK)];
+		vec = base->tv1[(base->ctimer_jiffies & TVR_MASK)];
 	} else {
 		int i;
 		if (idx > 0xffffffffUL) {
 			idx = 0xffffffffUL;
-			expires = idx + base->timer_jiffies;
+			expires = idx + base->ctimer_jiffies;
 		}
 		i = (expires >> (TVR_BITS + 3 * TVN_BITS)) & TVN_MASK;
 		vec = base->tv5[i];
 	}
 	/*
-	* Timers are FIFO:
+	* ctimers are FIFO:
 	*/
-	timer->item = clist_rpush(vec, timer);
+	ctimer->item = clist_rpush(vec, ctimer);
 }
 
-static void remove_timer_inner(timer *timer) {
-	clist_item_remove(timer->item);
-	timer->item = NULL;
+static void remove_ctimer_inner(ctimer *ctimer) {
+	clist_item_remove(ctimer->item);
+	ctimer->item = NULL;
 }
 
-void timer_remove(timer *t) {
+void ctimer_remove(ctimer *t) {
 	if(t->base == NULL)
 		return;
-	timer_base *base = t->base;
+	ctimer_base *base = t->base;
 	spinlock_lock(&base->lock);
 	if(t->item == NULL) {
 		spinlock_unlock(&base->lock);
 		return;
 	}
-	remove_timer_inner(t);
+	remove_ctimer_inner(t);
 	spinlock_unlock(&base->lock);
 }
 
-void timer_add(timer_base *base, timer *t) {
+void ctimer_add(ctimer_base *base, ctimer *t) {
 	spinlock_lock(&base->lock);
 	t->base = base;
-	add_timer_inner(base, t);
+	add_ctimer_inner(base, t);
 	spinlock_unlock(&base->lock);
 }
 
-timer_base* timer_base_create() {
-	struct timer_base *tb = jmalloc(sizeof(struct timer_base));
+ctimer_base* ctimer_base_create() {
+	struct ctimer_base *tb = jmalloc(sizeof(struct ctimer_base));
 	tb->lock = SL_UNLOCK;
 	tb->tv1 = tv_init(TVR_SIZE);
 	tb->tv2 = tv_init(TVN_SIZE);
@@ -116,13 +116,13 @@ timer_base* timer_base_create() {
 }
 
 static inline int cascade_walk_cb(void *data, void *priv) {
-	timer *t = (timer*)data;
-	timer_base *base = (timer_base *)priv;
-	add_timer_inner(base, t);
+	ctimer *t = (ctimer*)data;
+	ctimer_base *base = (ctimer_base *)priv;
+	add_ctimer_inner(base, t);
 	return 0;
 }
 
-static int cascade(struct timer_base *base, clist **tv, int index) {
+static int cascade(struct ctimer_base *base, clist **tv, int index) {
 	clist list;
 	if(LIST_EMPTY(tv[index]))
 		return index;
@@ -131,23 +131,23 @@ static int cascade(struct timer_base *base, clist **tv, int index) {
 	return index;
 }
 
-#define INDEX(N) ((base->timer_jiffies >> (TVR_BITS + (N) * TVN_BITS)) & TVN_MASK)
+#define INDEX(N) ((base->ctimer_jiffies >> (TVR_BITS + (N) * TVN_BITS)) & TVN_MASK)
 
 static inline int runner_walk_cb(void *data, void *priv) {
-	timer *timer = (struct timer*)data;
-	timer_base *base = (timer_base *)priv;
-	timer->item = NULL;
+	ctimer *ctimer = (struct ctimer*)data;
+	ctimer_base *base = (ctimer_base *)priv;
+	ctimer->item = NULL;
 	spinlock_unlock(&base->lock);
-	if(timer->cb) 
-		timer->cb(timer);
+	if(ctimer->cb) 
+		ctimer->cb(ctimer);
 	spinlock_lock(&base->lock);
 	return 0;
 }
 
-static inline void run_timers_inner(timer_base *base) {
+static inline void run_ctimers_inner(ctimer_base *base) {
 	clist list;
 	spinlock_lock(&base->lock);
-	int index = base->timer_jiffies & TVR_MASK;
+	int index = base->ctimer_jiffies & TVR_MASK;
 	if (!index &&
 			(!cascade(base, base->tv2, INDEX(0))) &&
 				(!cascade(base, base->tv3, INDEX(1))) &&
@@ -160,25 +160,25 @@ static inline void run_timers_inner(timer_base *base) {
 	spinlock_unlock(&base->lock);
 }
 
-void timer_run(timer_base *base) {
-	run_timers_inner(base);
+void ctimer_run(ctimer_base *base) {
+	run_ctimers_inner(base);
 }
 
-timer* timer_create() {
-	size_t s = sizeof(timer);
-	timer *t = jmalloc(s);
+ctimer* ctimer_create() {
+	size_t s = sizeof(ctimer);
+	ctimer *t = jmalloc(s);
 	memset(t, 0, s);
 	return t;
 }
 
-void timer_destroy(timer* t) {
-	timer_base *base = t->base;
+void ctimer_destroy(ctimer* t) {
+	ctimer_base *base = t->base;
 	if(t->item != NULL)
-		timer_remove(t);
+		ctimer_remove(t);
 	jfree(t);
 }
 
-void timer_base_destroy(struct timer_base* tb) {
+void ctimer_base_destroy(struct ctimer_base* tb) {
 	tb->lock = SL_UNLOCK;
 	tv_destroy(tb->tv1, TVR_SIZE);
 	tv_destroy(tb->tv2, TVN_SIZE);

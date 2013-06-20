@@ -16,14 +16,14 @@ static int try_process_command(cio *io);
 
 void cio_close_destroy(cio *io);
 
-static void io_timeout_cb(timer *t);
+static void io_timeout_cb(ctimer *t);
 
 static inline void io_add_timeout(cio *io) {
 	cevents *cevts = ((server*)io->priv)->evts;
 	io->timeout_timer->cb = io_timeout_cb;
 	io->timeout_timer->priv = io;
 	io->timeout_timer->expires = cevts->poll_sec*1000 + 500;
-	timer_add(cevts->timers, io->timeout_timer);
+	ctimer_add(cevts->timers, io->timeout_timer);
 }
 
 static void install_read_event(cevents *cevts, cio *io) {
@@ -36,7 +36,7 @@ void set_protocol_error(cio *io) {
 
 void cio_close_destroy_if_nessary(cio *io);
 
-static void io_timeout_cb(timer *t) {
+static void io_timeout_cb(ctimer *t) {
 	cio *io = (cio*)t->priv;
 	cevents *cevts = ((server*)io->priv)->evts;
 	DEBUG("fd[%d] [%s:%d] timeout\n", io->fd, io->ip, io->port);
@@ -75,7 +75,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 
 static inline void io_remove_timeout(cio *io) {
 	if(io->timeout_timer != NULL)
-			timer_remove(io->timeout_timer);
+			ctimer_remove(io->timeout_timer);
 }
 
 void cio_close_destroy_if_nessary(cio *io) {
@@ -91,7 +91,7 @@ void cio_close_destroy_if_nessary(cio *io) {
 		io->timeout_timer->cb = io_timeout_cb;
 		io->timeout_timer->priv = io;
 		io->timeout_timer->expires = cevts->poll_sec*1000 + 1000;
-		timer_add(cevts->timers, io->timeout_timer);
+		ctimer_add(cevts->timers, io->timeout_timer);
 	}
 
 }
