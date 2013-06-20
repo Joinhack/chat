@@ -85,6 +85,8 @@ static void remove_timer_inner(timer *timer) {
 }
 
 void timer_remove(timer *t) {
+	if(t->base == NULL)
+		return;
 	timer_base *base = t->base;
 	spinlock_lock(&base->lock);
 	if(t->item == NULL) {

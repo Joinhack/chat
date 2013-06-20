@@ -16,8 +16,18 @@ static int try_process_command(cio *io);
 
 void cio_close_destroy(cio *io);
 
+static void io_timeout_cb(timer *t);
+
+static inline void io_add_timeout(cio *io) {
+	cevents *cevts = ((server*)io->priv)->evts;
+	io->timeout_timer->cb = io_timeout_cb;
+	io->timeout_timer->priv = io;
+	io->timeout_timer->expires = cevts->poll_sec*1000 + 500;
+	timer_add(cevts->timers, io->timeout_timer);
+}
+
 static void install_read_event(cevents *cevts, cio *io) {
-	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
 }
 
 void set_protocol_error(cio *io) {
@@ -26,19 +36,11 @@ void set_protocol_error(cio *io) {
 
 void cio_close_destroy_if_nessary(cio *io);
 
-void io_timeout_cb(timer *t) {
+static void io_timeout_cb(timer *t) {
 	cio *io = (cio*)t->priv;
 	cevents *cevts = ((server*)io->priv)->evts;
-	DEBUG("connection [%s:%d] timeout\n", io->ip, io->port);
+	DEBUG("fd[%d] [%s:%d] timeout\n", io->fd, io->ip, io->port);
 	cio_close_destroy_if_nessary(io);
-}
-
-static inline void io_add_timeout(cio *io) {
-	cevents *cevts = ((server*)io->priv)->evts;
-	io->timeout_timer->cb = io_timeout_cb;
-	io->timeout_timer->priv = io;
-	io->timeout_timer->expires = cevts->poll_sec*1000 + 700;
-	timer_add(cevts->timers, io->timeout_timer);
 }
 
 //always return 0, don't push fired event queue
@@ -56,6 +58,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		return -1;
 	}
 	//TODO: maybe there add cio queue.
+	DEBUG("client[%d] %s:%d accepted\n", clifd, ip, port);
 	io = cio_create();
 	strcpy(io->ip, ip);
 	io->port = port;
@@ -63,11 +66,16 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	io->type = IO_TCP;
 	io->priv = priv;
 
-	io_add_timeout(io);
 	install_read_event(cevts, io);
+	io_add_timeout(io);
 	svr = (server*)priv;
 	atomic_add_uint32(&svr->connections, 1);
 	return 1;
+}
+
+static inline void io_remove_timeout(cio *io) {
+	if(io->timeout_timer != NULL)
+			timer_remove(io->timeout_timer);
 }
 
 void cio_close_destroy_if_nessary(cio *io) {
@@ -77,6 +85,8 @@ void cio_close_destroy_if_nessary(cio *io) {
 	if(io->handler_count == 0) {
 		cio_close_destroy(io);
 	} else {
+		DEBUG("fd[%d] close later\n", io->fd);
+		io_remove_timeout(io);
 		cevents *cevts = ((server*)io->priv)->evts;
 		io->timeout_timer->cb = io_timeout_cb;
 		io->timeout_timer->priv = io;
@@ -398,13 +408,11 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		cio_close_destroy_install(io);
 		return -1;
 	}
-
-	if(io->timeout_timer != NULL)
-		timer_remove(io->timeout_timer);
-
+	io_remove_timeout(io);
 	rs = _read_process(io);
 	if(!persist && rs == 1) {
 		install_read_event(cevts, io);
+		io_add_timeout(io);
 		return 1;
 	}
 	if(rs < 0) {
