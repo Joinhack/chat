@@ -45,6 +45,7 @@ static void _table_clear(dict *d, dict_table *table) {
 
 dict *dict_create(dict_opts *opts) {
 	dict *d = jmalloc(sizeof(struct dict));
+	memset(d, 0, sizeof(struct dict));
 	_table_reset(&d->dt[0]);
 	_table_reset(&d->dt[1]);
 	d->rehashidx = -1;

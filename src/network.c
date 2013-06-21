@@ -22,7 +22,7 @@ static inline void io_add_timeout(cio *io) {
 	cevents *cevts = ((server*)io->priv)->evts;
 	io->timeout_timer->cb = io_timeout_cb;
 	io->timeout_timer->priv = io;
-	io->timeout_timer->expires = cevts->poll_sec*1000 + 500;
+	io->timeout_timer->expires = cevts->poll_sec*1000 + 30000;
 	ctimer_add(cevts->timers, io->timeout_timer);
 }
 

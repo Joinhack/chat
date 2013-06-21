@@ -15,7 +15,7 @@
 #define REQ_TYPE_NORMAL 0x0
 #define REQ_TYPE_MBULK 0x1
 
-typedef struct {
+typedef struct cio {
 	int fd;
 	int type;
 	int mask;

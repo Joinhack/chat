@@ -26,7 +26,7 @@ static int cnet_accept_impl(int fd, struct sockaddr *sa, socklen_t *len,char *eb
 	while(1) {
 		clifd = accept(fd, sa, len);
 		if(clifd == -1) {
-			if(errno == EINTR)
+			if(errno == EINTR || errno == EAGAIN)
 				continue;
 			else {
 				cnet_fmt_err(ebuf, ebuflen, "accept error: %s\n", strerror(errno));
