@@ -69,8 +69,10 @@ cevents *cevents_create() {
 	int len;
 	len = sizeof(cevents);
 	evts = (cevents *)jmalloc(len);
-	memset((void *)evts, len, 0);
+
+	memset((void *)evts, 0, len);
 	evts->events = jmalloc(sizeof(cevent) * MAX_EVENTS);
+	memset(evts->events, 0, sizeof(cevent) * MAX_EVENTS);
 	evts->fired_fds = jmalloc(sizeof(int) * MAX_EVENTS);
 	for(size_t i = 0; i < MAX_EVENTS; i++) {
 		evts->events[i].fired_queue = clist_create();

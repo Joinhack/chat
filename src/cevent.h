@@ -18,7 +18,7 @@ typedef struct cevents cevents;
 
 typedef int event_proc(cevents *evts, int fd, void *priv, int mask);
 
-typedef struct {
+typedef struct cevent {
 	int mask;
 	event_proc *read_proc;
 	event_proc *write_proc;
