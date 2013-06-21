@@ -40,7 +40,6 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 	rwfd_set *rwfds = (rwfd_set*)cevts->priv_data;
 	fd_set work_rfds, work_wfds;
 	cevent *event;
-	cevent_fired *fired;
 	int rs, i;
 	int mask = 0;
 	int count = 0;
@@ -55,6 +54,7 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 	rs = select(cevts->maxfd+1, &work_rfds, &work_wfds, NULL, &tv);
 	if(rs > 0) {
 		for(i = 0; i <= cevts->maxfd; i++) {
+			cevent_fired fired = {0};
 			mask = CEV_NONE;
 			event = cevts->events + i;
 			if(event->mask == CEV_NONE)
@@ -63,10 +63,9 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 				mask |= CEV_WRITE;
 			if((event->mask & CEV_READ) && FD_ISSET(i, &work_rfds))
 				mask |= CEV_READ;
-			fired = cevts->fired + count;
-			fired->fd = i;
-			fired->mask = mask;
-			count++;
+			fired.fd = i;
+			fired.mask = mask;
+			fired_preproc(cevts, &fired, &count);
 		}
 	}
 	return count;
