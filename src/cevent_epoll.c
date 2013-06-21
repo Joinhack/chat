@@ -61,17 +61,16 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 	rs = epoll_wait(priv->epfd, priv->events, MAX_EVENTS, ms);
 	if(rs > 0) {
 		for(i = 0; i < rs; i++) {
+			cevent_fired fired = {0};
 			mask = CEV_NONE;
 			ep_event = priv->events + i;
-			fired = jmalloc(sizeof(cevent_fired));
 			if (ep_event->events & EPOLLIN) 
 				mask |= CEV_READ;
 			if (ep_event->events & EPOLLOUT) 
 				mask |= CEV_WRITE;
-			fired->fd = ep_event->data.fd;
-			fired->mask = mask;
-			cevents_push_fired(cevts, fired);
-			count++;
+			fired.fd = ep_event->data.fd;
+			fired.mask = mask;
+			fired_preproc(cevts, &fired, &count);
 		}
 	}
 	return count;
