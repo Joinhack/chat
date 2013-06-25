@@ -62,7 +62,7 @@ static int cevents_poll_impl(cevents *cevts, msec_t ms) {
 	struct kevent *kevt;
 	struct timespec timeout;
 	timeout.tv_sec = (long) (ms / 1000);
-	timeout.tv_nsec = (long) (ms % 1000);
+	timeout.tv_nsec = (long) ((ms % 1000) * 1000000);
 	rs = kevent(priv->kqfd, NULL, 0, priv->events, MAX_EVENTS, &timeout);
 	if(rs > 0) {
 		for(i = 0; i < rs; i++) {
