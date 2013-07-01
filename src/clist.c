@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "log.h"
 #include "jmalloc.h"
 #include "clist.h"
 
@@ -57,14 +58,17 @@ void *clist_lpop(clist *cl) {
 
 int clist_walk_remove(clist *cl, int (*cb)(void *, void *priv), void *priv) {
 	int count = 0, c;
-	clist_item *item;
-	item = cl;
-	while(!LIST_EMPTY(cl)) {
-		item = item->next;
-		if(!cb(item->data, priv)) {
-			REMOVE(item);
+	clist_item *current, *next;
+	next = cl->next;
+	while(1) {
+		if(LIST_EMPTY(cl) || next == NULL) break;
+		current = next;
+		if(!cb(current->data, priv)) {
+			next = current->next;
+			REMOVE(current);
 			count++;
-		}
+		} else
+			next = current->next;
 	}
 	return count;
 }
