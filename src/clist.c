@@ -62,7 +62,6 @@ int clist_walk_remove(clist *cl, int (*cb)(void *, void *priv), void *priv) {
 	next = cl->next;
 	while(1) {
 		current = next;
-		DEBUG("%p %p %p\n", cl, current, next);
 		if(current == cl || current == NULL) break;
 		next = current->next;
 		if(!cb(current->data, priv)) {
