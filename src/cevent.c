@@ -225,8 +225,10 @@ int cevents_poll(cevents *cevts, msec_t ms) {
 	count = cevents_poll_impl(cevts, ms);
 	UNLOCK(&cevts->lock);
 	time_now(&cevts->poll_sec, &cevts->poll_ms);
-	ctimer_set_jiffies(cevts->timers, cevts->poll_sec*1000+cevts->poll_ms);
-	ctimer_run(cevts->timers);
+	if((long)(cevts->poll_sec*1000+cevts->poll_ms) - (long)ctimer_get_jiffies(cevts->timers) > 1000) {
+		ctimer_run(cevts->timers);
+		ctimer_set_jiffies(cevts->timers, cevts->poll_sec*1000+cevts->poll_ms);
+	}
 	//must sleep, let other thread grant the lock. maybe removed when the time event added.
 	usleep(2);
 	return count;

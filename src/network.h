@@ -28,6 +28,10 @@ void *process_event(void *priv);
 
 int reply_bulk(cio *io, obj *obj);
 
+void io_add_timeout(cio *io);
+
+void io_remove_timeout(cio *io);
+
 int reply_len(cio *io, long long l);
 
 #ifdef __cplusplus

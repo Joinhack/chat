@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
+#include <time.h>
 #include <sys/time.h>
 #include "common.h"
 
@@ -12,12 +13,11 @@ void time_now(long *s, int *ms) {
 }
 
 long get_jiffies() {
-	long l;
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	l = now.tv_sec * 1000;
-	l += now.tv_usec;
-	return l;
+	long now;
+	int ms;
+	time_now(&now, &ms);
+	now = now * 1000 + ms + clock();
+	return now;
 }
 
 int str2ll(char *p, size_t len, long long *l) {

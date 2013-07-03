@@ -122,6 +122,7 @@ void del_command(cio *io) {
 
 void get_command(cio *io) {
 	server *svr = (server*)io->priv;
+	sleep(1);
 	obj *o = db_get(svr->db, io->tabidx, io->argv[1]);
 	if(o == NULL) {
 		reply_cstr(io, (cstr)shared.nullbulk->priv);
@@ -209,7 +210,7 @@ void *process_event(void *priv) {
 			return NULL;
 		evt = cevts->events + fired.fd;
 		cio *io = (cio*)evt->priv;
-		atomic_add_uint32(&io->handler_count, 1);
+		io_remove_timeout(io);
 		if(fired.mask & CEV_PERSIST) {
 			io->mask = fired.mask;
 			process_commond(io);
@@ -221,7 +222,6 @@ void *process_event(void *priv) {
 				evt->write_proc(cevts, fired.fd, evt->priv, fired.mask);
 			}
 		}
-		atomic_sub_uint32(&io->handler_count, 1);
 	}
 	return NULL;
 }
@@ -298,7 +298,7 @@ int mainLoop(server *svr) {
 		ev_num = cevents_poll(svr->evts, 10);
 		if(ev_num > 0) {
 			//if connections less than limited, use the main thread process or use multi thread process. I think this value should from config.
-			if(((int)svr->connections) > 10) {
+			if(((int)svr->connections) > 0) {
 				for(i = 0; i < ev_num; i++) {
 					//all threads is working.
 					if(cthr_pool_run_task(svr->thr_pool, process_event, svr->evts) == -1) {

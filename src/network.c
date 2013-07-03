@@ -18,16 +18,18 @@ void cio_close_destroy(cio *io);
 
 static void io_timeout_cb(ctimer *t);
 
-static inline void io_add_timeout(cio *io) {
+static void cio_close_destroy_install(cio *io);
+
+void io_add_timeout(cio *io) {
 	cevents *cevts = ((server*)io->priv)->evts;
 	io->timeout_timer->cb = io_timeout_cb;
 	io->timeout_timer->priv = io;
-	io->timeout_timer->expires = cevts->poll_sec*1000 + 30000;
+	io->timeout_timer->expires = cevts->poll_sec*1000 + 500;
 	ctimer_add(cevts->timers, io->timeout_timer);
 }
 
 static void install_read_event(cevents *cevts, cio *io) {
-	cevents_add_event(cevts, io->fd, CEV_READ, read_event_proc, io);
+	cevents_add_event(cevts, io->fd, CEV_READ|CEV_PERSIST, read_event_proc, io);
 }
 
 void set_protocol_error(cio *io) {
@@ -40,7 +42,8 @@ static void io_timeout_cb(ctimer *t) {
 	cio *io = (cio*)t->priv;
 	cevents *cevts = ((server*)io->priv)->evts;
 	DEBUG("fd[%d] [%s:%d] timeout\n", io->fd, io->ip, io->port);
-	cio_close_destroy_if_nessary(io);
+	cevents_clear_fired_events(cevts, io->fd);
+	cio_close_destroy_install(io);
 }
 
 //always return 0, don't push fired event queue
@@ -73,7 +76,7 @@ int tcp_accept_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 	return 1;
 }
 
-static inline void io_remove_timeout(cio *io) {
+void io_remove_timeout(cio *io) {
 	if(io->timeout_timer != NULL)
 			ctimer_remove(io->timeout_timer);
 }
@@ -81,12 +84,11 @@ static inline void io_remove_timeout(cio *io) {
 void cio_close_destroy_if_nessary(cio *io) {
 	cevents *cevts = ((server*)io->priv)->evts;
 	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST);
-	cevents_clear_fired_events(cevts, io->fd);
+	io_remove_timeout(io);
 	if(io->handler_count == 0) {
 		cio_close_destroy(io);
 	} else {
 		DEBUG("fd[%d] close later\n", io->fd);
-		io_remove_timeout(io);
 		cevents *cevts = ((server*)io->priv)->evts;
 		io->timeout_timer->cb = io_timeout_cb;
 		io->timeout_timer->priv = io;
@@ -97,11 +99,12 @@ void cio_close_destroy_if_nessary(cio *io) {
 }
 
 void cio_close_destroy(cio *io) {
+	io_remove_timeout(io);
 	server *svr = (server*)io->priv;
 	cevents *cevts = svr->evts;
 	DEBUG("client[%d] %s:%d closed\n", io->fd, io->ip, io->port);
 	svr = (server*)io->priv;
-	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST|CEV_TIMEOUT);	
+	cevents_del_event(cevts, io->fd, CEV_READ|CEV_WRITE|CEV_PERSIST|CEV_TIMEOUT);
 	atomic_sub_uint32(&svr->connections, 1);
 	close(io->fd);
 	cio_destroy(io);
@@ -109,7 +112,7 @@ void cio_close_destroy(cio *io) {
 
 int cio_close_destroy_event_cb(cevents *cevts, int fd, void *priv, int mask) {
 	cio *io = (cio*)priv;
-	cio_close_destroy_if_nessary(io);
+	cio_close_destroy(io);
 	return 1;
 }
 
@@ -142,8 +145,8 @@ int response(cio *io) {
 		return 0;
 	}
 	cio_clear(io);
-	//if use CEV_PERSIST, we should disable write event fired.
 	io_add_timeout(io);
+	//if use CEV_PERSIST, we should disable write event fired.
 	if(persist) {
 		install_read_event(cevts, io);
 		cevents_del_event(cevts, io->fd, CEV_WRITE);
@@ -408,11 +411,9 @@ int read_event_proc(cevents *cevts, int fd, void *priv, int mask) {
 		cio_close_destroy_install(io);
 		return -1;
 	}
-	io_remove_timeout(io);
 	rs = _read_process(io);
 	if(!persist && rs == 1) {
 		install_read_event(cevts, io);
-		io_add_timeout(io);
 		return 1;
 	}
 	if(rs < 0) {

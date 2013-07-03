@@ -55,6 +55,7 @@ int cevents_poll(cevents *cevts, msec_t ms);
 void cevents_push_fired(cevents *cevts, cevent_fired *fired);
 int cevents_pop_fired(cevents *cevts, cevent_fired *fired);
 int cevents_clear_fired_events(cevents *cevts, int fd);
+uint64_t ctimer_get_jiffies(ctimer_base *b);
 #ifdef __cplusplus
 }
 #endif
